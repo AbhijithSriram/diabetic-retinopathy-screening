@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}DrishtiTrust{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">DrishtiTrust</span>
+  <nav>
+    <a href="/" class="{{ 'on' if active=='screen' }}">Screen</a>
+    <a href="/review" class="{{ 'on' if active=='review' }}">Tele-review</a>
+    <a href="/referrals" class="{{ 'on' if active=='referrals' }}">Referrals</a>
+    <a href="/dashboard" class="{{ 'on' if active=='dashboard' }}">Dashboard</a>
+    <a href="/study" class="{{ 'on' if active=='study' }}">Reader study</a>
+  </nav>
+  <span class="proto">Research prototype &middot; not a medical device</span>
+</header>
+<main>
+{% block body %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

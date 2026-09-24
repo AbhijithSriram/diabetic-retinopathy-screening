@@ -1,0 +1,51 @@
+{
+  "district": {
+    "annual_screenings": 100000,
+    "sites": 20,
+    "working_days_per_year": 250,
+    "site_hours_per_day": 8
+  },
+  "capture": {
+    "minutes_per_attempt": [
+      2,
+      3,
+      5
+    ],
+    "intrinsic_ungradable": 0.05,
+    "technique_failure": 0.08,
+    "retake_success": 0.6,
+    "max_attempts": 3
+  },
+  "network": {
+    "image_mb": 1.5,
+    "eyes_per_patient": 2,
+    "bandwidth_kbps": 512,
+    "online_fraction": 0.6,
+    "outage_mean_hours": 2.0
+  },
+  "population": {
+    "referable_prevalence": 0.08
+  },
+  "triage": {
+    "recall": 0.55,
+    "review": 0.3,
+    "refer": 0.15,
+    "audit_fraction_of_recalls": 0.02
+  },
+  "review": {
+    "reviewers": 2,
+    "seconds_per_case": 30,
+    "review_hours_per_reviewer_day": 2,
+    "sla_hours": 48,
+    "refer_after_review": 0.45
+  },
+  "referral": {
+    "hospital_slots_per_day": 60,
+    "completion_baseline": 0.15,
+    "completion_with_engine": 0.4
+  },
+  "run": {
+    "days": 90,
+    "seed": 20260919
+  }
+}

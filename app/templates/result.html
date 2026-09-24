@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% set active = 'screen' %}
+{% block title %}Result · DrishtiTrust{% endblock %}
+{% block body %}
+{% set o = r.outcome %}
+{% set label = {'recall': 'Routine re-screen', 'review': 'Sent to eye doctor', 'refer': ('Refer — urgent' if r.urgent else 'Refer to eye specialist'), 'recapture': 'Retake the photo'}[o] %}
+<div class="outcome o-{{ o }}">
+  <div class="big">{{ label }}</div>
+  <p>{{ r.message.main }}</p>
+  {% for w in r.message.why %}<p class="small">{{ w }}</p>{% endfor %}
+</div>
+<p class="noprint">
+  Language: <a href="?lang=en">English</a> · <a href="?lang=hi">हिन्दी</a> · <a href="?lang=ta">தமிழ்</a>
+  {% if o == 'recapture' %} · <a class="btn primary" href="/?attempt={{ c.attempt + 1 }}&site={{ c.site }}&patient={{ c.patient }}&eye={{ c.eye }}&lang={{ lang }}">Retake (attempt {{ c.attempt + 1 }} of 3)</a>{% endif %}
+  {% if o == 'refer' %} · <a class="btn primary" href="/slip/{{ c.token }}">Print referral slip</a>{% endif %}
+  {% if o in ('refer', 'review') %} · <a href="/s/{{ c.token }}?lang={{ lang }}">Patient status link</a>{% endif %}
+  · <a href="/">Next patient</a>
+</p>
+<p class="small muted">{{ r.message.disclaimer }}</p>
+<details class="panel"><summary>Details for staff</summary>
+  <div class="grid2" style="margin-top:10px">
+    <div class="imgbox">{% if r.images %}<img src="{{ r.images.lesions or r.images.photo }}" alt="retina photo">{% endif %}</div>
+    <div>
+      {% if r.grade %}<p>Most likely grade: <b>{{ r.grade.most_likely }}</b>; referable probability {{ '%.0f' % (100 * r.grade.p_referable) }}%.
+      {% if r.grade_set %}Plausible range: {{ r.grade_set|join(' to ') }}.{% endif %}</p>{% endif %}
+      {% if r.reasons %}<p>Why review: {{ r.reasons|join('; ') }}.</p>{% endif %}
+      <p>Photo quality: {{ 'passed' if r.quality.passed else 'failed' }}{% if r.quality.gradability is not none %} (gradability {{ '%.2f' % r.quality.gradability }}){% endif %}.</p>
+      <p class="small muted">Processed in {{ r.seconds }} s.</p>
+    </div>
+  </div>
+</details>
+{% endblock %}

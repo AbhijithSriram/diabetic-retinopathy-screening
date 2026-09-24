@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% set active = 'dashboard' %}
+{% block title %}Dashboard · DrishtiTrust{% endblock %}
+{% block body %}
+<h1>Programme dashboard</h1>
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ d.outcomes.values()|sum }}</div><div class="l">photos screened</div></div>
+  <div class="kpi"><div class="v">{{ d.outcomes.get('recall', 0) }}</div><div class="l">routine re-screen</div></div>
+  <div class="kpi"><div class="v">{{ d.outcomes.get('review', 0) }}</div><div class="l">sent to tele-review</div></div>
+  <div class="kpi"><div class="v">{{ d.outcomes.get('refer', 0) }}</div><div class="l">referred directly</div></div>
+  <div class="kpi"><div class="v">{{ d.review_seconds_median if d.review_seconds_median is not none else '—' }} s</div><div class="l">median review time (p90 {{ d.review_seconds_p90 if d.review_seconds_p90 is not none else '—' }} s)</div></div>
+  <div class="kpi"><div class="v">{{ d.referral_states.get('attended', 0) + d.referral_states.get('closed', 0) }} / {{ d.referral_states.values()|sum }}</div><div class="l">referrals completed</div></div>
+</div>
+{% for name, ev in results.items() %}
+<div class="panel" style="margin-top:14px">
+  <h2>Validation: {{ name }}</h2>
+  <p class="small muted">Operating point and triage thresholds fitted on the calibration split only, then frozen.</p>
+  <div style="overflow-x:auto">
+  <table>
+    <tr><th>Test set</th><th>n</th><th>AUC</th><th>Sensitivity (95% CI)</th><th>Specificity (95% CI)</th><th>QWK</th><th>Set coverage</th><th>Referable auto-recalled</th></tr>
+    {% for set, v in ev.sets.items() %}
+    <tr><td>{{ set }}</td><td>{{ v.n_images }}</td><td>{{ '%.3f' % v.auc_referable[0] }}</td>
+      <td>{{ '%.1f' % (100*v.at_operating_point.sensitivity[0]) }}% ({{ '%.1f' % (100*v.at_operating_point.sensitivity[1]) }}–{{ '%.1f' % (100*v.at_operating_point.sensitivity[2]) }})</td>
+      <td>{{ '%.1f' % (100*v.at_operating_point.specificity[0]) }}% ({{ '%.1f' % (100*v.at_operating_point.specificity[1]) }}–{{ '%.1f' % (100*v.at_operating_point.specificity[2]) }})</td>
+      <td>{{ v.qwk }}</td><td>{{ '%.1f' % (100*v.prediction_sets.coverage[0]) }}%</td>
+      <td>{{ v.triage_cnn_only.referable_auto_recalled.count }} / {{ v.triage_cnn_only.referable_auto_recalled.of_referable }}</td></tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endfor %}
+<div class="panel" style="margin-top:14px">
+  <h2>Message outbox (mock)</h2>
+  {% if d.outbox %}<table class="small"><tr><th>Referral</th><th>To</th><th>Text</th></tr>
+  {% for m in d.outbox %}<tr><td>#{{ m.referral_id }}</td><td>{{ m.recipient }}</td><td>{{ m.text }}</td></tr>{% endfor %}</table>
+  {% else %}<p class="muted">No messages yet.</p>{% endif %}
+</div>
+{% endblock %}

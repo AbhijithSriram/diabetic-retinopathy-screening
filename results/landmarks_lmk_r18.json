@@ -1,0 +1,11 @@
+{
+  "n": 103,
+  "unit": "original IDRiD pixels (4288x2848)",
+  "od_mean_ed": 13.3,
+  "od_median_ed": 9.4,
+  "fovea_mean_ed": 32.4,
+  "fovea_median_ed": 23.8,
+  "od_within_100px_pct": 99.0,
+  "fovea_within_100px_pct": 94.2,
+  "fovea_within_200px_pct": 100.0
+}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% set active = 'review' %}
+{% block title %}Tele-review queue · DrishtiTrust{% endblock %}
+{% block body %}
+<h1>Tele-review queue <span class="muted small">({{ cases|length }} waiting)</span></h1>
+<div class="panel">
+{% if cases %}
+<table>
+<tr><th>Case</th><th>Priority</th><th>Site</th><th>Waiting</th><th>AI referable prob.</th><th>Plausible grades</th><th></th></tr>
+{% for c in cases %}
+<tr>
+  <td>#{{ c.id }} · {{ c.patient or '—' }} ({{ c.eye }})</td>
+  <td>{% if c.urgent %}<span class="pill urgent">urgent</span>{% else %}routine{% endif %}</td>
+  <td>{{ c.site }}</td><td>{{ c.created|ago }}</td>
+  <td>{{ '%.0f%%' % (100 * c.p_ref) if c.p_ref is not none else '—' }}</td>
+  <td>{{ (c.grade_set|fromjson or [])|join(' – ') }}</td>
+  <td><a class="btn primary" href="/review/{{ c.id }}">Review</a></td>
+</tr>
+{% endfor %}
+</table>
+{% else %}<p class="muted">Nothing waiting. Cases the AI is unsure about, and a small random audit sample of routine cases, appear here.</p>{% endif %}
+</div>
+{% endblock %}

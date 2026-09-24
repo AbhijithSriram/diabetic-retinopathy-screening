@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# datasets and generated artefacts never go in git
+data/
+runs/
+*.pt
+*.pth
+*.onnx
+*.onnx.data
+app/drishti.db
+results/**/*.npz
+results/**/cache/
+app/samples/
+app/study_set.csv

@@ -1,0 +1,90 @@
+{% extends "base.html" %}{% set active = 'study' if study else 'review' %}
+{% block title %}Review · DrishtiTrust{% endblock %}
+{% block body %}
+<div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap">
+  <h1 style="margin-right:auto">{% if study %}Reader study · case {{ study.k + 1 }} of {{ study.n }}{% else %}Case #{{ c.id }} · {{ c.patient or '—' }} {{ c.eye }} · {{ c.site }}{% endif %}</h1>
+  <span class="timer" id="timer">0.0 s</span>
+</div>
+<div class="grid2">
+  <div class="panel">
+    <div class="tabs">
+      {% if r.images %}
+      {% if r.images.lesions %}<button type="button" data-img="lesions" class="on">Lesions marked</button>{% endif %}
+      <button type="button" data-img="photo" class="{{ 'on' if not r.images.lesions }}">Photo</button>
+      {% if r.images.gradcam %}<button type="button" data-img="gradcam">Grad-CAM</button>{% endif %}
+      {% endif %}
+    </div>
+    <div class="imgbox"><img id="main" src="{{ (r.images.lesions or r.images.photo) if r.images }}" alt="retina"></div>
+    <p class="small muted">Lesion outlines: red rings = microaneurysms, dark red = haemorrhages, yellow = hard exudates, white = soft exudates. Green circle = optic disc; cyan circle = 1 disc diameter around the fovea.</p>
+  </div>
+  <div>
+    <div class="panel">
+      <h2>AI summary</h2>
+      {% if r.grade %}
+      <table class="gradebars">
+        {% for p in r.grade.probs %}
+        <tr class="{{ 'inset' if r.grade_set and ICDR[loop.index0] in r.grade_set }}"><td>{{ loop.index0 }} · {{ ICDR[loop.index0] }}</td>
+        <td style="width:100%"><div class="bar"><span style="width: {{ (100 * p)|round(1) }}%"></span></div></td><td class="small">{{ '%.0f' % (100 * p) }}%</td></tr>
+        {% endfor %}
+      </table>
+      <p>Referable probability <b>{{ '%.0f' % (100 * r.grade.p_referable) }}%</b>{% if r.grade_set %} · 90% plausible range: <b>{{ r.grade_set|join(' – ') }}</b>{% endif %}</p>
+      {% if r.reasons %}<p class="small">Sent for review because: {{ r.reasons|join('; ') }}.</p>{% endif %}
+      {% else %}<p class="muted">Grader not available.</p>{% endif %}
+    </div>
+    {% if r.rules %}
+    <div class="panel">
+      <h2>Lesion evidence (ICDR rules)</h2>
+      <ul class="trace">{% for t in r.rules.trace %}<li>{{ t }}</li>{% endfor %}</ul>
+      <table class="small">
+        <tr><th>Quadrant</th><th>MA</th><th>HE</th><th>EX</th><th>SE</th></tr>
+        {% for q, v in r.rules.quadrants.items() %}<tr><td>{{ q }}</td><td>{{ v.MA or 0 }}</td><td>{{ v.HE or 0 }}</td><td>{{ v.EX or 0 }}</td><td>{{ v.SE or 0 }}</td></tr>{% endfor %}
+      </table>
+      <p class="small muted">Fovea {{ r.rules.fovea.source }}; disc diameter {{ r.rules.disc_diameter_source }}.</p>
+    </div>
+    {% endif %}
+    <div class="panel">
+      <h2>Your decision</h2>
+      <div class="decide">
+        {% for g in range(5) %}<button type="button" data-grade="{{ g }}">{{ g }}<small>{{ ICDR[g] }}</small></button>{% endfor %}
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="dme"> Macular oedema (hard exudates within 1 DD of fovea)</label>
+      <p><button type="button" id="ungradable">Ungradable</button> <span class="small muted">Keys: 0–4 grade · D oedema · U ungradable</span></p>
+      <p class="small muted" id="done"></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const imgs = {{ (r.images or {})|tojson }};
+const t0 = performance.now();
+const timer = document.getElementById('timer');
+let stopped = false;
+const tick = () => { if (stopped) return; const s = (performance.now() - t0) / 1000; timer.textContent = s.toFixed(1) + ' s'; timer.classList.toggle('over', s > 30); };
+const timerId = setInterval(tick, 100);
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); document.getElementById('main').src = imgs[b.dataset.img];
+});
+const study = {{ study|tojson }};
+async function submit(grade, ungradable) {
+  if (stopped) return;
+  stopped = true;
+  const ms = Math.round(performance.now() - t0);
+  const body = {grade: grade, dme: document.getElementById('dme').checked ? 1 : 0, ungradable: ungradable ? 1 : 0, ms: ms,
+                ai_p_ref: {{ (r.grade.p_referable if r.grade else none)|tojson }}, ai_outcome: {{ r.outcome|tojson }}};
+  const url = study ? `/api/study/${study.sid}/${study.k}` : '/api/review/{{ c.id }}';
+  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const j = await res.json();
+  document.getElementById('done').textContent = `Saved in ${(ms / 1000).toFixed(1)} s` + (j.final ? ` → ${j.final}` : '');
+  setTimeout(() => { location.href = study ? j.next : {{ (('/review/' ~ next_id) if next_id else '/review')|tojson }}; }, 500);
+}
+document.querySelectorAll('.decide button').forEach(b => b.onclick = () => submit(+b.dataset.grade, false));
+document.getElementById('ungradable').onclick = () => submit(0, true);
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '4') submit(+e.key, false);
+  else if (e.key === 'd' || e.key === 'D') document.getElementById('dme').click();
+  else if (e.key === 'u' || e.key === 'U') submit(0, true);
+});
+</script>
+{% endblock %}

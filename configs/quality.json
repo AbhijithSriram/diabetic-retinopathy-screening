@@ -1,0 +1,10 @@
+{
+  "min_fov_fraction": 0.45,
+  "dark_median": 44.97,
+  "bright_median": 180.0,
+  "max_clipped": 0.02,
+  "min_evenness": 0.25983570128679273,
+  "min_focus": 0.017445008922368287,
+  "gradability_threshold": 0.6715556383132935,
+  "max_attempts": 3
+}

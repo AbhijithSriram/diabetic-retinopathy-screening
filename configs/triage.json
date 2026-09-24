@@ -1,0 +1,5 @@
+{
+  "_note": "Set from the matched-workload ablation (results/ablation_*.json): lesion evidence as a triage trigger adds no safety over widening the CNN's own review band to the same workload, so it is used for explanation only. The DME rule can send a case to review because the grader is not trained on macular oedema.",
+  "use_lesion_flag": false,
+  "use_dme_flag": true
+}

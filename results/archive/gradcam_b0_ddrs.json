@@ -1,0 +1,17 @@
+{
+  "images_with_lesions": 81,
+  "dilation_px_at_512": 10,
+  "mean_energy_in_lesion": 0.585,
+  "mean_lift_over_chance": 2.4,
+  "lift_95ci": [
+    2.2,
+    2.62
+  ],
+  "pointing_game": [
+    0.938,
+    0.864,
+    0.973
+  ],
+  "pointing_game_chance": 0.293,
+  "note": "IDRiD segmentation images (never seen by the grader); chance lift = 1.0"
+}

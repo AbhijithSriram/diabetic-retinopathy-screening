@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% set active = 'referrals' %}
+{% block title %}Referrals · DrishtiTrust{% endblock %}
+{% block body %}
+<h1>Referral tracker</h1>
+<p class="muted">A referral is not finished when the patient is told. Each case is tracked until the patient reaches the eye hospital; a missed visit moves the contact plan from patient → family → ASHA worker. Messages are mocked (logged, not sent).</p>
+<div class="panel">
+{% if refs %}
+<table>
+<tr><th>Case</th><th>Priority</th><th>State</th><th>Contact</th><th>Appointment</th><th>Next step</th><th></th></tr>
+{% for r in refs %}
+<tr>
+  <td>#{{ r.case_id }} · {{ r.patient or '—' }} ({{ r.eye }}) · {{ r.site }}</td>
+  <td>{% if r.urgent %}<span class="pill urgent">urgent</span>{% else %}routine{% endif %}</td>
+  <td><b>{{ r.state }}</b><br><span class="small muted">{% for h in (r.history_json|fromjson) %}{{ h.state }}{{ ' → ' if not loop.last }}{% endfor %}</span></td>
+  <td>{{ r.contact_tier }}</td>
+  <td>{{ r.appointment or '—' }}</td>
+  <td class="noprint">
+    {% for s in next[r.state] %}
+      {% if s == 'booked' %}<input type="date" id="d{{ r.id }}" style="width:auto">{% endif %}
+      <button type="button" onclick="adv({{ r.id }}, '{{ s }}')">{{ s }}</button>
+    {% endfor %}
+  </td>
+  <td><a href="/slip/{{ r.token }}">slip</a> · <a href="/s/{{ r.token }}">status</a></td>
+</tr>
+{% endfor %}
+</table>
+{% else %}<p class="muted">No referrals yet.</p>{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function adv(id, to) {
+  const d = document.getElementById('d' + id);
+  const r = await fetch('/api/referral/' + id, {method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({to: to, appointment: d && d.value ? d.value : null})});
+  if (!r.ok) alert(await r.text()); else location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,9 @@
+<!doctype html><html lang="{{ lang }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eye check status</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><main style="max-width:640px">
+<p class="small"><a href="?lang=en">English</a> · <a href="?lang=hi">हिन्दी</a> · <a href="?lang=ta">தமிழ்</a></p>
+{% set o = c.final or r.outcome %}
+<div class="outcome o-{{ o }}"><p style="margin-top:0">{{ r.message.main }}</p>{% for w in r.message.why %}<p class="small">{{ w }}</p>{% endfor %}</div>
+{% if ref %}<div class="panel"><h2>Your referral</h2><p>Status: <b>{{ ref.state }}</b>{% if ref.appointment %} · appointment {{ ref.appointment }}{% endif %}</p></div>{% endif %}
+<p class="small muted">{{ r.message.disclaimer }}</p>
+</main></body></html>

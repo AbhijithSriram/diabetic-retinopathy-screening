@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% set active = 'study' %}
+{% block title %}Reader study results · DrishtiTrust{% endblock %}
+{% block body %}
+<h1>Reader study results · {{ s.reader }}</h1>
+<div class="kpis">
+  <div class="kpi"><div class="v">{{ out.n }}</div><div class="l">cases reviewed</div></div>
+  <div class="kpi"><div class="v">{{ out.median_s or '—' }} s</div><div class="l">median time per case (p90 {{ out.p90_s or '—' }} s)</div></div>
+  <div class="kpi"><div class="v">{{ out.under_30s_pct or '—' }}%</div><div class="l">decided in under 30 s</div></div>
+  <div class="kpi"><div class="v">{{ out.qwk_vs_reference or '—' }}</div><div class="l">grade agreement with reference (QWK)</div></div>
+</div>
+{% if out.referable_sens %}<p class="panel">Referable DR vs reference: sensitivity {{ '%.1f' % (100*out.referable_sens[0]) }}% ({{ '%.1f' % (100*out.referable_sens[1]) }}–{{ '%.1f' % (100*out.referable_sens[2]) }}), specificity {{ '%.1f' % (100*out.referable_spec[0]) }}% ({{ '%.1f' % (100*out.referable_spec[1]) }}–{{ '%.1f' % (100*out.referable_spec[2]) }}).</p>{% endif %}
+<div class="panel"><table class="small"><tr><th>Image</th><th>Reference</th><th>Reader</th><th>Seconds</th><th>AI referable prob.</th></tr>
+{% for r in rows %}<tr><td>{{ r.image_id }}</td><td>{{ r.ref_grade }}</td><td>{{ 'ungradable' if r.ungradable else r.grade }}</td><td>{{ '%.1f' % (r.ms / 1000) }}</td><td>{{ '%.2f' % r.ai_p_ref if r.ai_p_ref is not none else '—' }}</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

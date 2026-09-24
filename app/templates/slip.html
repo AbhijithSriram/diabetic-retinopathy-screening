@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referral slip</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><main style="max-width:720px">
+<div class="panel">
+  <h1>Eye referral slip · नेत्र रेफ़रल पर्ची · கண் பரிந்துரைச் சீட்டு</h1>
+  <table>
+    <tr><th>Patient code</th><td>{{ c.patient or '—' }} ({{ c.eye }} eye)</td></tr>
+    <tr><th>Screened at</th><td>{{ c.site }}</td></tr>
+    <tr><th>Priority</th><td>{% if r.urgent %}<b>URGENT — within {{ cfg.urgent_days }} days</b>{% else %}Within {{ cfg.routine_days }} days{% endif %}</td></tr>
+    <tr><th>Why</th><td>{% if r.reason == 'ungradable' %}A clear photo could not be taken; the eye needs an in-person check.{% else %}Signs of diabetic eye damage were found in the retina photo.{% endif %}
+      {% if r.rules and r.rules.dme_flag %} Possible swelling near the centre of vision.{% endif %}</td></tr>
+    <tr><th>Go to</th><td>District eye hospital (programme to fill in)</td></tr>
+    <tr><th>Check status</th><td><code>{{ base }}s/{{ c.token }}</code><br><span class="small muted">No login needed. Keep this slip.</span></td></tr>
+  </table>
+  <p class="small muted">For the eye specialist: AI referable probability {{ '%.0f%%' % (100 * r.grade.p_referable) if r.grade else '—' }}{% if r.grade_set %}; plausible grades {{ r.grade_set|join(' – ') }}{% endif %}{% if r.rules %}; lesions MA {{ r.rules.counts.MA }}, HE {{ r.rules.counts.HE }}, EX {{ r.rules.counts.EX }}, SE {{ r.rules.counts.SE }}{% endif %}.</p>
+  <p class="small muted">Research prototype. Not a medical device. A doctor makes the final decision.</p>
+  <p class="noprint"><button class="primary" onclick="print()">Print</button></p>
+</div>
+</main></body></html>

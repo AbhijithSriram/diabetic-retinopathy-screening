@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% set active = 'screen' %}
+{% block title %}Screen a patient · DrishtiTrust{% endblock %}
+{% block body %}
+<h1>Screen a patient</h1>
+{% if missing %}<p class="notice">Not trained yet: {{ missing|join(', ') }}. Screening still runs; missing parts are skipped and the case goes to human review.</p>{% endif %}
+<form id="f" class="panel">
+  <div class="row">
+    <div><label>Site</label><select name="site"><option>PHC-1</option><option>PHC-2</option><option>Camp-A</option></select></div>
+    <div><label>Patient code (no names in this demo)</label><input type="text" name="patient" placeholder="e.g. P-0042"></div>
+    <div><label>Eye</label><select name="eye"><option value="right">Right</option><option value="left">Left</option></select></div>
+    <div><label>Language for the patient</label><select name="lang"><option value="en">English</option><option value="hi">हिन्दी</option><option value="ta">தமிழ்</option></select></div>
+  </div>
+  <label>Retina photo</label>
+  <input type="file" name="file" accept="image/*" capture="environment">
+  {% if samples %}
+  <label>…or a sample photo from a public dataset</label>
+  <select name="sample"><option value="">(none)</option>{% for s in samples %}<option>{{ s }}</option>{% endfor %}</select>
+  {% endif %}
+  <input type="hidden" name="attempt" value="1">
+  <p><button class="primary" type="submit" id="go">Check photo</button> <span id="st" class="muted"></span></p>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const f = document.getElementById('f');
+const q = new URLSearchParams(location.search);
+for (const k of ['site','patient','eye','lang','attempt']) if (q.get(k)) f.elements[k].value = q.get(k);
+if (+f.elements.attempt.value > 1) document.getElementById('st').textContent = 'Attempt ' + f.elements.attempt.value + ' of 3';
+f.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(f);
+  if (!fd.get('file') || !fd.get('file').size) fd.delete('file');
+  if (!fd.get('file') && !fd.get('sample')) { alert('Take or choose a photo first'); return; }
+  document.getElementById('go').disabled = true;
+  document.getElementById('st').textContent = 'Checking…';
+  const r = await fetch('/api/screen', {method: 'POST', body: fd});
+  if (!r.ok) { document.getElementById('st').textContent = 'Error: ' + (await r.text()); document.getElementById('go').disabled = false; return; }
+  const j = await r.json();
+  location.href = '/case/' + j.case_id;
+});
+</script>
+{% endblock %}

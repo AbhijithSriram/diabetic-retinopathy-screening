@@ -1,0 +1,247 @@
+{
+  "n_per_group": {
+    "dev real (DDR + APTOS)": 350,
+    "dev simulated": 350,
+    "IDRiD (external)": 350,
+    "Messidor-2 (external)": 350
+  },
+  "summary": {
+    "sharpness": {
+      "dev real (DDR + APTOS)": {
+        "p5": 0.2471,
+        "median": 0.4459,
+        "p95": 0.9558
+      },
+      "dev simulated": {
+        "p5": 0.185,
+        "median": 0.4399,
+        "p95": 2.4164
+      },
+      "IDRiD (external)": {
+        "p5": 0.4443,
+        "median": 0.5282,
+        "p95": 0.7114
+      },
+      "Messidor-2 (external)": {
+        "p5": 0.3105,
+        "median": 0.3778,
+        "p95": 0.5084
+      }
+    },
+    "noise": {
+      "dev real (DDR + APTOS)": {
+        "p5": 0.0,
+        "median": 0.0185,
+        "p95": 0.0749
+      },
+      "dev simulated": {
+        "p5": 0.0,
+        "median": 0.0245,
+        "p95": 0.1989
+      },
+      "IDRiD (external)": {
+        "p5": 0.0146,
+        "median": 0.0325,
+        "p95": 0.051
+      },
+      "Messidor-2 (external)": {
+        "p5": 0.0,
+        "median": 0.0158,
+        "p95": 0.0328
+      }
+    },
+    "vignetting": {
+      "dev real (DDR + APTOS)": {
+        "p5": 0.3826,
+        "median": 0.8435,
+        "p95": 1.5835
+      },
+      "dev simulated": {
+        "p5": 0.2934,
+        "median": 0.7151,
+        "p95": 1.2321
+      },
+      "IDRiD (external)": {
+        "p5": 0.5698,
+        "median": 0.7236,
+        "p95": 0.9521
+      },
+      "Messidor-2 (external)": {
+        "p5": 0.7234,
+        "median": 0.9025,
+        "p95": 1.1668
+      }
+    },
+    "illum_cv": {
+      "dev real (DDR + APTOS)": {
+        "p5": 0.1374,
+        "median": 0.2508,
+        "p95": 0.6262
+      },
+      "dev simulated": {
+        "p5": 0.1493,
+        "median": 0.2972,
+        "p95": 0.6204
+      },
+      "IDRiD (external)": {
+        "p5": 0.1688,
+        "median": 0.2551,
+        "p95": 0.4156
+      },
+      "Messidor-2 (external)": {
+        "p5": 0.1174,
+        "median": 0.1951,
+        "p95": 0.3273
+      }
+    },
+    "red_ratio": {
+      "dev real (DDR + APTOS)": {
+        "p5": 1.1933,
+        "median": 1.7591,
+        "p95": 2.4901
+      },
+      "dev simulated": {
+        "p5": 1.2422,
+        "median": 1.8245,
+        "p95": 2.6966
+      },
+      "IDRiD (external)": {
+        "p5": 1.7123,
+        "median": 2.0834,
+        "p95": 2.7213
+      },
+      "Messidor-2 (external)": {
+        "p5": 1.6519,
+        "median": 2.1464,
+        "p95": 3.0823
+      }
+    },
+    "blue_ratio": {
+      "dev real (DDR + APTOS)": {
+        "p5": 0.0547,
+        "median": 0.4163,
+        "p95": 0.7673
+      },
+      "dev simulated": {
+        "p5": 0.154,
+        "median": 0.4222,
+        "p95": 0.7458
+      },
+      "IDRiD (external)": {
+        "p5": 0.0378,
+        "median": 0.2586,
+        "p95": 0.6602
+      },
+      "Messidor-2 (external)": {
+        "p5": 0.1597,
+        "median": 0.3364,
+        "p95": 0.5296
+      }
+    },
+    "blockiness": {
+      "dev real (DDR + APTOS)": {
+        "p5": 0.9777,
+        "median": 1.0991,
+        "p95": 1.2956
+      },
+      "dev simulated": {
+        "p5": 0.9966,
+        "median": 1.3862,
+        "p95": 2.2073
+      },
+      "IDRiD (external)": {
+        "p5": 0.9928,
+        "median": 1.0149,
+        "p95": 1.1221
+      },
+      "Messidor-2 (external)": {
+        "p5": 1.0583,
+        "median": 1.1715,
+        "p95": 1.2431
+      }
+    }
+  },
+  "coverage": {
+    "IDRiD (external)": {
+      "sharpness": {
+        "covered_by_dev_real": 1.0,
+        "covered_by_dev_simulated": 1.0
+      },
+      "noise": {
+        "covered_by_dev_real": 1.0,
+        "covered_by_dev_simulated": 1.0
+      },
+      "vignetting": {
+        "covered_by_dev_real": 0.997,
+        "covered_by_dev_simulated": 0.989
+      },
+      "illum_cv": {
+        "covered_by_dev_real": 0.989,
+        "covered_by_dev_simulated": 0.98
+      },
+      "red_ratio": {
+        "covered_by_dev_real": 0.886,
+        "covered_by_dev_simulated": 0.946
+      },
+      "blue_ratio": {
+        "covered_by_dev_real": 0.891,
+        "covered_by_dev_simulated": 0.68
+      },
+      "blockiness": {
+        "covered_by_dev_real": 1.0,
+        "covered_by_dev_simulated": 0.917
+      },
+      "mean_over_statistics": {
+        "covered_by_dev_real": 0.966,
+        "covered_by_dev_simulated": 0.93
+      }
+    },
+    "Messidor-2 (external)": {
+      "sharpness": {
+        "covered_by_dev_real": 1.0,
+        "covered_by_dev_simulated": 1.0
+      },
+      "noise": {
+        "covered_by_dev_real": 1.0,
+        "covered_by_dev_simulated": 1.0
+      },
+      "vignetting": {
+        "covered_by_dev_real": 0.994,
+        "covered_by_dev_simulated": 0.971
+      },
+      "illum_cv": {
+        "covered_by_dev_real": 0.871,
+        "covered_by_dev_simulated": 0.82
+      },
+      "red_ratio": {
+        "covered_by_dev_real": 0.774,
+        "covered_by_dev_simulated": 0.886
+      },
+      "blue_ratio": {
+        "covered_by_dev_real": 1.0,
+        "covered_by_dev_simulated": 0.951
+      },
+      "blockiness": {
+        "covered_by_dev_real": 0.991,
+        "covered_by_dev_simulated": 0.997
+      },
+      "mean_over_statistics": {
+        "covered_by_dev_real": 0.947,
+        "covered_by_dev_simulated": 0.946
+      }
+    }
+  },
+  "separability_auc": {
+    "note": "AUC of a 5-fold cross-validated classifier on capture statistics; 0.5 = indistinguishable, lower is better",
+    "IDRiD (external)": {
+      "training_pool_real_only": 0.909,
+      "training_pool_with_simulation": 0.932
+    },
+    "Messidor-2 (external)": {
+      "training_pool_real_only": 0.922,
+      "training_pool_with_simulation": 0.922
+    },
+    "real_vs_simulated (should be high)": 0.892
+  },
+  "contact_sheet": "results\\figures\\capture_simulator.jpg"
+}

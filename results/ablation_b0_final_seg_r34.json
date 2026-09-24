@@ -1,0 +1,211 @@
+{
+  "policy": {
+    "lambda_low": 0.118360296,
+    "lambda_high": 0.7630026300000001,
+    "lambda_op": 0.21578161,
+    "qhat": 0.99443704,
+    "alpha_miss": 0.03,
+    "beta_false": 0.02,
+    "alpha_set": 0.1,
+    "calibrated_on": "valB (DDR valid half + APTOS 7.5%)",
+    "n_cal": 1509
+  },
+  "idrid": {
+    "n": 469,
+    "rows": [
+      {
+        "config": "A1 CNN single threshold",
+        "recall": 0.339,
+        "review": 0.0,
+        "refer": 0.661,
+        "referable_missed": 17,
+        "referable": 276,
+        "missed_rate_ci": [
+          0.0616,
+          0.0388,
+          0.0964
+        ]
+      },
+      {
+        "config": "A2 CNN bands",
+        "recall": 0.2729,
+        "review": 0.2537,
+        "refer": 0.4733,
+        "referable_missed": 10,
+        "referable": 276,
+        "missed_rate_ci": [
+          0.0362,
+          0.0198,
+          0.0654
+        ]
+      },
+      {
+        "config": "A3 + lesion evidence",
+        "recall": 0.0469,
+        "review": 0.4797,
+        "refer": 0.4733,
+        "referable_missed": 1,
+        "referable": 276,
+        "missed_rate_ci": [
+          0.0036,
+          0.0006,
+          0.0202
+        ]
+      },
+      {
+        "config": "A4 + DME rule",
+        "recall": 0.0469,
+        "review": 0.4797,
+        "refer": 0.4733,
+        "referable_missed": 1,
+        "referable": 276,
+        "missed_rate_ci": [
+          0.0036,
+          0.0006,
+          0.0202
+        ]
+      },
+      {
+        "config": "A2 at A4's workload (CNN band widened)",
+        "recall": 0.0469,
+        "review": 0.4797,
+        "refer": 0.4733,
+        "referable_missed": 1,
+        "referable": 276,
+        "missed_rate_ci": [
+          0.0036,
+          0.0006,
+          0.0202
+        ]
+      }
+    ],
+    "rule_evidence_vs_truth_referable_accuracy": 0.6503,
+    "rule_evidence_referable": {
+      "n": 469,
+      "positives": 276,
+      "tp": 275,
+      "fn": 1,
+      "tn": 30,
+      "fp": 163,
+      "sensitivity": [
+        0.9964,
+        0.9798,
+        0.9994
+      ],
+      "specificity": [
+        0.1554,
+        0.1111,
+        0.2132
+      ],
+      "npv": [
+        0.9677,
+        0.8381,
+        0.9943
+      ],
+      "ppv": [
+        0.6279,
+        0.5817,
+        0.6718
+      ]
+    }
+  },
+  "messidor2": {
+    "n": 1744,
+    "rows": [
+      {
+        "config": "A1 CNN single threshold",
+        "recall": 0.5275,
+        "review": 0.0,
+        "refer": 0.4725,
+        "referable_missed": 26,
+        "referable": 457,
+        "missed_rate_ci": [
+          0.0569,
+          0.0391,
+          0.0821
+        ]
+      },
+      {
+        "config": "A2 CNN bands",
+        "recall": 0.3733,
+        "review": 0.41,
+        "refer": 0.2167,
+        "referable_missed": 13,
+        "referable": 457,
+        "missed_rate_ci": [
+          0.0284,
+          0.0167,
+          0.0481
+        ]
+      },
+      {
+        "config": "A3 + lesion evidence",
+        "recall": 0.2122,
+        "review": 0.5711,
+        "refer": 0.2167,
+        "referable_missed": 7,
+        "referable": 457,
+        "missed_rate_ci": [
+          0.0153,
+          0.0074,
+          0.0313
+        ]
+      },
+      {
+        "config": "A4 + DME rule",
+        "recall": 0.2122,
+        "review": 0.5711,
+        "refer": 0.2167,
+        "referable_missed": 7,
+        "referable": 457,
+        "missed_rate_ci": [
+          0.0153,
+          0.0074,
+          0.0313
+        ]
+      },
+      {
+        "config": "A2 at A4's workload (CNN band widened)",
+        "recall": 0.2122,
+        "review": 0.5711,
+        "refer": 0.2167,
+        "referable_missed": 4,
+        "referable": 457,
+        "missed_rate_ci": [
+          0.0088,
+          0.0034,
+          0.0223
+        ]
+      }
+    ],
+    "rule_evidence_vs_truth_referable_accuracy": 0.5894,
+    "rule_evidence_referable": {
+      "n": 1744,
+      "positives": 457,
+      "tp": 426,
+      "fn": 31,
+      "tn": 602,
+      "fp": 685,
+      "sensitivity": [
+        0.9322,
+        0.9053,
+        0.9518
+      ],
+      "specificity": [
+        0.4678,
+        0.4406,
+        0.4951
+      ],
+      "npv": [
+        0.951,
+        0.9313,
+        0.9653
+      ],
+      "ppv": [
+        0.3834,
+        0.3553,
+        0.4124
+      ]
+    }
+  }
+}

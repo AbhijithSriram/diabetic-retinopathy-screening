@@ -1,0 +1,48 @@
+# District screening simulation parameters.
+# Every value says where it comes from. "ASSUMPTION" means a placeholder to
+# replace with real programme data (e.g. from the Aravind contact).
+
+district:
+  annual_screenings: 100000        # PS 26038: "district programs serving 100,000+ patients annually"
+  sites: 20                         # ASSUMPTION: PHC / camp camera sites in one district
+  working_days_per_year: 250        # ASSUMPTION
+  site_hours_per_day: 8             # ASSUMPTION
+
+capture:
+  minutes_per_attempt: [2, 3, 5]    # ASSUMPTION: triangular(min, mode, max) per photo attempt
+  intrinsic_ungradable: 0.05        # ASSUMPTION: eyes no retake can fix (cataract, small pupil); DDR has ~8% ungradable overall
+  technique_failure: 0.08           # ASSUMPTION: first-attempt failures a coached retake can fix
+  retake_success: 0.6               # ASSUMPTION: share of technique failures fixed per retake
+  max_attempts: 3                   # design: 3 failures -> in-person referral
+
+network:
+  image_mb: 1.5                     # ASSUMPTION: one JPEG per eye after compression
+  eyes_per_patient: 2
+  bandwidth_kbps: 512               # ASSUMPTION: rural 3G/4G uplink when online
+  online_fraction: 0.6              # ASSUMPTION: share of time the site has a usable link
+  outage_mean_hours: 2.0            # ASSUMPTION: mean length of an outage
+
+population:
+  referable_prevalence: 0.08        # ASSUMPTION informed by SMART-India (Lancet Glob Health 2022): any DR 12.5%, sight-threatening 4.0% of people with diabetes
+
+triage:                             # re-mixed from results/eval_*.json conditional rates when available
+  recall: 0.55
+  review: 0.30
+  refer: 0.15
+  audit_fraction_of_recalls: 0.02   # design: random audit sample that keeps calibration honest
+
+review:
+  reviewers: 2                      # decision variable
+  seconds_per_case: 30              # PS 26038: "validation in under 30 seconds"
+  review_hours_per_reviewer_day: 2  # ASSUMPTION: tele-review time per ophthalmologist per day
+  sla_hours: 48                     # design target
+  refer_after_review: 0.45          # ASSUMPTION until the reader study: share of reviewed cases the doctor refers
+
+referral:
+  hospital_slots_per_day: 60        # ASSUMPTION: district eye hospital capacity for DR referrals
+  completion_baseline: 0.15         # Mohali pragmatic trial 2023-24: 13-17% (PMC12599091)
+  completion_with_engine: 0.40      # ASSUMPTION: target, to be measured; swept 0.15-0.60 in the report
+
+run:
+  days: 90                          # simulated working days per run (results scaled to a year)
+  seed: 20260919

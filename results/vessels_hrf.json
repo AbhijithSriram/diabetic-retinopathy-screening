@@ -1,0 +1,8 @@
+{
+  "dataset": "HRF test (images 11-15 of healthy / DR / glaucoma, 15 total)",
+  "scale": "FOV diameter 1440px",
+  "sensitivity": 0.7949,
+  "specificity": 0.9801,
+  "accuracy": 0.9617,
+  "auc": 0.9801
+}

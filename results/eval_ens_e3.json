@@ -1,0 +1,1040 @@
+{
+  "grader": "ens_e3",
+  "policy": {
+    "lambda_low": 0.2622068199462186,
+    "lambda_high": 0.8487654537688686,
+    "lambda_op": 0.3590094522712957,
+    "qhat": 0.9965657448249524,
+    "alpha_miss": 0.03,
+    "beta_false": 0.02,
+    "alpha_set": 0.1,
+    "calibrated_on": "valB (DDR valid half + APTOS 7.5%)",
+    "n_cal": 1505
+  },
+  "sets": {
+    "valB (calibration, for reference)": {
+      "n_images": 1505,
+      "grade_counts": {
+        "0": 757,
+        "1": 88,
+        "2": 514,
+        "3": 37,
+        "4": 109
+      },
+      "auc_referable": [
+        0.9832,
+        0.9775,
+        0.9882
+      ],
+      "at_operating_point": {
+        "n": 1505,
+        "positives": 660,
+        "tp": 628,
+        "fn": 32,
+        "tn": 781,
+        "fp": 64,
+        "sensitivity": [
+          0.9515,
+          0.9324,
+          0.9654
+        ],
+        "specificity": [
+          0.9243,
+          0.9044,
+          0.9402
+        ],
+        "npv": [
+          0.9606,
+          0.945,
+          0.972
+        ],
+        "ppv": [
+          0.9075,
+          0.8836,
+          0.9269
+        ]
+      },
+      "meets_ps_target": {
+        "sensitivity_gt_90": true,
+        "specificity_gt_85": true,
+        "ci_lower_sens_gt_90": true
+      },
+      "qwk": 0.9316,
+      "ece_referable": 0.0276,
+      "prediction_sets": {
+        "coverage": [
+          0.9721,
+          0.9625,
+          0.9793
+        ],
+        "mean_size": 2.123,
+        "size_hist": {
+          "1": 258,
+          "2": 909,
+          "3": 233,
+          "4": 105,
+          "5": 0
+        },
+        "per_grade": {
+          "0": [
+            0.9881,
+            0.9776,
+            0.9937,
+            757
+          ],
+          "1": [
+            0.9886,
+            0.9384,
+            0.998,
+            88
+          ],
+          "2": [
+            0.9611,
+            0.9407,
+            0.9747,
+            514
+          ],
+          "3": [
+            0.8919,
+            0.7529,
+            0.9571,
+            37
+          ],
+          "4": [
+            0.9266,
+            0.8618,
+            0.9623,
+            109
+          ]
+        }
+      },
+      "triage_cnn_only": {
+        "recall_fraction": 0.5163,
+        "recall_given_referable": 0.0273,
+        "recall_given_non_referable": 0.8982,
+        "review_fraction": 0.1176,
+        "review_given_referable": 0.1606,
+        "review_given_non_referable": 0.084,
+        "refer_fraction": 0.3661,
+        "refer_given_referable": 0.8121,
+        "refer_given_non_referable": 0.0178,
+        "referable_auto_recalled": {
+          "count": 18,
+          "of_referable": 660,
+          "rate": [
+            0.0273,
+            0.0173,
+            0.0427
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 15,
+          "of_non_referable": 845,
+          "rate": [
+            0.0178,
+            0.0108,
+            0.0291
+          ]
+        },
+        "n": 1505
+      }
+    },
+    "DDR test (internal)": {
+      "n_images": 2503,
+      "grade_counts": {
+        "0": 1259,
+        "1": 125,
+        "2": 891,
+        "3": 48,
+        "4": 180
+      },
+      "auc_referable": [
+        0.9888,
+        0.9855,
+        0.9916
+      ],
+      "at_operating_point": {
+        "n": 2503,
+        "positives": 1119,
+        "tp": 1064,
+        "fn": 55,
+        "tn": 1297,
+        "fp": 87,
+        "sensitivity": [
+          0.9508,
+          0.9366,
+          0.962
+        ],
+        "specificity": [
+          0.9371,
+          0.9231,
+          0.9488
+        ],
+        "npv": [
+          0.9593,
+          0.9474,
+          0.9686
+        ],
+        "ppv": [
+          0.9244,
+          0.9077,
+          0.9383
+        ]
+      },
+      "meets_ps_target": {
+        "sensitivity_gt_90": true,
+        "specificity_gt_85": true,
+        "ci_lower_sens_gt_90": true
+      },
+      "qwk": 0.932,
+      "ece_referable": 0.0212,
+      "prediction_sets": {
+        "coverage": [
+          0.97,
+          0.9626,
+          0.976
+        ],
+        "mean_size": 2.093,
+        "size_hist": {
+          "1": 395,
+          "2": 1646,
+          "3": 295,
+          "4": 167,
+          "5": 0
+        },
+        "per_grade": {
+          "0": [
+            0.9849,
+            0.9765,
+            0.9903,
+            1259
+          ],
+          "1": [
+            0.992,
+            0.9561,
+            0.9986,
+            125
+          ],
+          "2": [
+            0.9618,
+            0.9471,
+            0.9726,
+            891
+          ],
+          "3": [
+            0.8125,
+            0.6806,
+            0.8981,
+            48
+          ],
+          "4": [
+            0.9333,
+            0.8871,
+            0.9615,
+            180
+          ]
+        }
+      },
+      "triage_cnn_only": {
+        "recall_fraction": 0.5178,
+        "recall_given_referable": 0.0366,
+        "recall_given_non_referable": 0.9068,
+        "review_fraction": 0.1131,
+        "review_given_referable": 0.1483,
+        "review_given_non_referable": 0.0845,
+        "refer_fraction": 0.3692,
+        "refer_given_referable": 0.815,
+        "refer_given_non_referable": 0.0087,
+        "referable_auto_recalled": {
+          "count": 41,
+          "of_referable": 1119,
+          "rate": [
+            0.0366,
+            0.0271,
+            0.0493
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 12,
+          "of_non_referable": 1384,
+          "rate": [
+            0.0087,
+            0.005,
+            0.0151
+          ]
+        },
+        "n": 2503
+      }
+    },
+    "APTOS test (internal)": {
+      "n_images": 534,
+      "grade_counts": {
+        "0": 270,
+        "1": 51,
+        "2": 145,
+        "3": 26,
+        "4": 42
+      },
+      "auc_referable": [
+        0.9873,
+        0.9806,
+        0.9927
+      ],
+      "at_operating_point": {
+        "n": 534,
+        "positives": 213,
+        "tp": 206,
+        "fn": 7,
+        "tn": 292,
+        "fp": 29,
+        "sensitivity": [
+          0.9671,
+          0.9337,
+          0.984
+        ],
+        "specificity": [
+          0.9097,
+          0.8733,
+          0.9364
+        ],
+        "npv": [
+          0.9766,
+          0.9525,
+          0.9886
+        ],
+        "ppv": [
+          0.8766,
+          0.8284,
+          0.9127
+        ]
+      },
+      "meets_ps_target": {
+        "sensitivity_gt_90": true,
+        "specificity_gt_85": true,
+        "ci_lower_sens_gt_90": true
+      },
+      "qwk": 0.9427,
+      "ece_referable": 0.029,
+      "prediction_sets": {
+        "coverage": [
+          0.985,
+          0.9707,
+          0.9924
+        ],
+        "mean_size": 2.266,
+        "size_hist": {
+          "1": 113,
+          "2": 200,
+          "3": 187,
+          "4": 34,
+          "5": 0
+        },
+        "per_grade": {
+          "0": [
+            0.9926,
+            0.9734,
+            0.998,
+            270
+          ],
+          "1": [
+            0.9804,
+            0.897,
+            0.9965,
+            51
+          ],
+          "2": [
+            1.0,
+            0.9742,
+            1.0,
+            145
+          ],
+          "3": [
+            0.9615,
+            0.8111,
+            0.9932,
+            26
+          ],
+          "4": [
+            0.9048,
+            0.7793,
+            0.9623,
+            42
+          ]
+        }
+      },
+      "triage_cnn_only": {
+        "recall_fraction": 0.5356,
+        "recall_given_referable": 0.0094,
+        "recall_given_non_referable": 0.8847,
+        "review_fraction": 0.1648,
+        "review_given_referable": 0.2582,
+        "review_given_non_referable": 0.1028,
+        "refer_fraction": 0.2996,
+        "refer_given_referable": 0.7324,
+        "refer_given_non_referable": 0.0125,
+        "referable_auto_recalled": {
+          "count": 2,
+          "of_referable": 213,
+          "rate": [
+            0.0094,
+            0.0026,
+            0.0336
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 4,
+          "of_non_referable": 321,
+          "rate": [
+            0.0125,
+            0.0049,
+            0.0316
+          ]
+        },
+        "n": 534
+      }
+    },
+    "ODIR (held-out, China, mixed cameras)": {
+      "n_images": 6228,
+      "grade_counts": {
+        "0": 4584,
+        "1": 534,
+        "2": 934,
+        "3": 150,
+        "4": 26
+      },
+      "auc_referable": [
+        0.9461,
+        0.9373,
+        0.9537
+      ],
+      "at_operating_point": {
+        "n": 6228,
+        "positives": 1110,
+        "tp": 1044,
+        "fn": 66,
+        "tn": 3858,
+        "fp": 1260,
+        "sensitivity": [
+          0.9405,
+          0.9251,
+          0.953
+        ],
+        "specificity": [
+          0.7538,
+          0.7418,
+          0.7654
+        ],
+        "npv": [
+          0.9832,
+          0.9787,
+          0.9868
+        ],
+        "ppv": [
+          0.4531,
+          0.4329,
+          0.4735
+        ]
+      },
+      "meets_ps_target": {
+        "sensitivity_gt_90": true,
+        "specificity_gt_85": false,
+        "ci_lower_sens_gt_90": true
+      },
+      "qwk": 0.5629,
+      "ece_referable": 0.1769,
+      "prediction_sets": {
+        "coverage": [
+          0.9041,
+          0.8966,
+          0.9112
+        ],
+        "mean_size": 2.448,
+        "size_hist": {
+          "1": 235,
+          "2": 4060,
+          "3": 839,
+          "4": 1094,
+          "5": 0
+        },
+        "per_grade": {
+          "0": [
+            0.8892,
+            0.8798,
+            0.8979,
+            4584
+          ],
+          "1": [
+            0.9888,
+            0.9757,
+            0.9948,
+            534
+          ],
+          "2": [
+            0.9497,
+            0.9337,
+            0.9619,
+            934
+          ],
+          "3": [
+            0.8,
+            0.7289,
+            0.8562,
+            150
+          ],
+          "4": [
+            0.7692,
+            0.5795,
+            0.8897,
+            26
+          ]
+        }
+      },
+      "triage_cnn_only": {
+        "recall_fraction": 0.5591,
+        "recall_given_referable": 0.0423,
+        "recall_given_non_referable": 0.6712,
+        "review_fraction": 0.2677,
+        "review_given_referable": 0.191,
+        "review_given_non_referable": 0.2843,
+        "refer_fraction": 0.1732,
+        "refer_given_referable": 0.7667,
+        "refer_given_non_referable": 0.0445,
+        "referable_auto_recalled": {
+          "count": 47,
+          "of_referable": 1110,
+          "rate": [
+            0.0423,
+            0.032,
+            0.0559
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 228,
+          "of_non_referable": 5118,
+          "rate": [
+            0.0445,
+            0.0392,
+            0.0506
+          ]
+        },
+        "n": 6228
+      }
+    },
+    "IDRiD all 516 (external, India, Kowa)": {
+      "n_images": 516,
+      "grade_counts": {
+        "0": 168,
+        "1": 25,
+        "2": 168,
+        "3": 93,
+        "4": 62
+      },
+      "auc_referable": [
+        0.9638,
+        0.9495,
+        0.9759
+      ],
+      "at_operating_point": {
+        "n": 516,
+        "positives": 323,
+        "tp": 300,
+        "fn": 23,
+        "tn": 154,
+        "fp": 39,
+        "sensitivity": [
+          0.9288,
+          0.8954,
+          0.9521
+        ],
+        "specificity": [
+          0.7979,
+          0.7357,
+          0.8485
+        ],
+        "npv": [
+          0.8701,
+          0.8126,
+          0.9118
+        ],
+        "ppv": [
+          0.885,
+          0.8466,
+          0.9147
+        ]
+      },
+      "meets_ps_target": {
+        "sensitivity_gt_90": true,
+        "specificity_gt_85": false,
+        "ci_lower_sens_gt_90": false
+      },
+      "qwk": 0.8249,
+      "ece_referable": 0.0473,
+      "prediction_sets": {
+        "coverage": [
+          0.9767,
+          0.9598,
+          0.9866
+        ],
+        "mean_size": 2.797,
+        "size_hist": {
+          "1": 6,
+          "2": 162,
+          "3": 279,
+          "4": 69,
+          "5": 0
+        },
+        "per_grade": {
+          "0": [
+            0.9881,
+            0.9576,
+            0.9967,
+            168
+          ],
+          "1": [
+            1.0,
+            0.8668,
+            1.0,
+            25
+          ],
+          "2": [
+            0.9762,
+            0.9404,
+            0.9907,
+            168
+          ],
+          "3": [
+            0.9785,
+            0.9249,
+            0.9941,
+            93
+          ],
+          "4": [
+            0.9355,
+            0.8455,
+            0.9746,
+            62
+          ]
+        }
+      },
+      "triage_cnn_only": {
+        "recall_fraction": 0.2965,
+        "recall_given_referable": 0.0402,
+        "recall_given_non_referable": 0.7254,
+        "review_fraction": 0.2907,
+        "review_given_referable": 0.3003,
+        "review_given_non_referable": 0.2746,
+        "refer_fraction": 0.4128,
+        "refer_given_referable": 0.6594,
+        "refer_given_non_referable": 0.0,
+        "referable_auto_recalled": {
+          "count": 13,
+          "of_referable": 323,
+          "rate": [
+            0.0402,
+            0.0237,
+            0.0676
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 0,
+          "of_non_referable": 193,
+          "rate": [
+            0.0,
+            0.0,
+            0.0195
+          ]
+        },
+        "n": 516
+      },
+      "triage_with_rules": {
+        "recall_fraction": 0.0504,
+        "recall_given_referable": 0.0031,
+        "recall_given_non_referable": 0.1295,
+        "review_fraction": 0.5368,
+        "review_given_referable": 0.3375,
+        "review_given_non_referable": 0.8705,
+        "refer_fraction": 0.4128,
+        "refer_given_referable": 0.6594,
+        "refer_given_non_referable": 0.0,
+        "referable_auto_recalled": {
+          "count": 1,
+          "of_referable": 323,
+          "rate": [
+            0.0031,
+            0.0005,
+            0.0173
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 0,
+          "of_non_referable": 193,
+          "rate": [
+            0.0,
+            0.0,
+            0.0195
+          ]
+        },
+        "n": 516
+      }
+    },
+    "Messidor-2 (external, France, Topcon)": {
+      "n_images": 1744,
+      "grade_counts": {
+        "0": 1017,
+        "1": 270,
+        "2": 347,
+        "3": 75,
+        "4": 35
+      },
+      "auc_referable": [
+        0.967,
+        0.9567,
+        0.9759
+      ],
+      "at_operating_point": {
+        "n": 1744,
+        "positives": 457,
+        "tp": 419,
+        "fn": 38,
+        "tn": 1107,
+        "fp": 180,
+        "sensitivity": [
+          0.9168,
+          0.8879,
+          0.9388
+        ],
+        "specificity": [
+          0.8601,
+          0.8401,
+          0.878
+        ],
+        "npv": [
+          0.9668,
+          0.9548,
+          0.9757
+        ],
+        "ppv": [
+          0.6995,
+          0.6616,
+          0.7348
+        ]
+      },
+      "meets_ps_target": {
+        "sensitivity_gt_90": true,
+        "specificity_gt_85": true,
+        "ci_lower_sens_gt_90": false
+      },
+      "qwk": 0.7078,
+      "ece_referable": 0.0899,
+      "prediction_sets": {
+        "coverage": [
+          0.8962,
+          0.881,
+          0.9097
+        ],
+        "mean_size": 2.22,
+        "size_hist": {
+          "1": 40,
+          "2": 1349,
+          "3": 286,
+          "4": 69,
+          "5": 0
+        },
+        "per_grade": {
+          "0": [
+            0.8505,
+            0.8273,
+            0.8711,
+            1017
+          ],
+          "1": [
+            0.9889,
+            0.9678,
+            0.9962,
+            270
+          ],
+          "2": [
+            0.9741,
+            0.9514,
+            0.9863,
+            347
+          ],
+          "3": [
+            0.9467,
+            0.8707,
+            0.9791,
+            75
+          ],
+          "4": [
+            0.6286,
+            0.4634,
+            0.7683,
+            35
+          ]
+        }
+      },
+      "triage_cnn_only": {
+        "recall_fraction": 0.6049,
+        "recall_given_referable": 0.0569,
+        "recall_given_non_referable": 0.7995,
+        "review_fraction": 0.1829,
+        "review_given_referable": 0.1816,
+        "review_given_non_referable": 0.1834,
+        "refer_fraction": 0.2122,
+        "refer_given_referable": 0.7615,
+        "refer_given_non_referable": 0.0171,
+        "referable_auto_recalled": {
+          "count": 26,
+          "of_referable": 457,
+          "rate": [
+            0.0569,
+            0.0391,
+            0.0821
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 22,
+          "of_non_referable": 1287,
+          "rate": [
+            0.0171,
+            0.0113,
+            0.0257
+          ]
+        },
+        "n": 1744
+      },
+      "triage_with_rules": {
+        "recall_fraction": 0.3343,
+        "recall_given_referable": 0.035,
+        "recall_given_non_referable": 0.4406,
+        "review_fraction": 0.4536,
+        "review_given_referable": 0.2035,
+        "review_given_non_referable": 0.5423,
+        "refer_fraction": 0.2122,
+        "refer_given_referable": 0.7615,
+        "refer_given_non_referable": 0.0171,
+        "referable_auto_recalled": {
+          "count": 16,
+          "of_referable": 457,
+          "rate": [
+            0.035,
+            0.0217,
+            0.0561
+          ]
+        },
+        "non_referable_direct_referred": {
+          "count": 22,
+          "of_non_referable": 1287,
+          "rate": [
+            0.0171,
+            0.0113,
+            0.0257
+          ]
+        },
+        "n": 1744
+      }
+    }
+  },
+  "messidor2_exam_level": {
+    "n_exams": 874,
+    "referable_exams": 270,
+    "reference": {
+      "sensitivity": 0.968,
+      "specificity": 0.87,
+      "source": "Abramoff et al., IOVS 2016, IDx-DR X2.1 on Messidor-2 (exam level)"
+    },
+    "auc_cnn": [
+      0.9652,
+      0.9525,
+      0.9761
+    ],
+    "cnn_only": {
+      "n": 874,
+      "positives": 270,
+      "tp": 253,
+      "fn": 17,
+      "tn": 484,
+      "fp": 120,
+      "sensitivity": [
+        0.937,
+        0.9015,
+        0.9603
+      ],
+      "specificity": [
+        0.8013,
+        0.7676,
+        0.8312
+      ],
+      "npv": [
+        0.9661,
+        0.9463,
+        0.9787
+      ],
+      "ppv": [
+        0.6783,
+        0.6293,
+        0.7237
+      ]
+    },
+    "cnn_plus_dme_rule": {
+      "n": 874,
+      "positives": 270,
+      "tp": 254,
+      "fn": 16,
+      "tn": 442,
+      "fp": 162,
+      "sensitivity": [
+        0.9407,
+        0.9059,
+        0.9632
+      ],
+      "specificity": [
+        0.7318,
+        0.6951,
+        0.7656
+      ],
+      "npv": [
+        0.9651,
+        0.944,
+        0.9784
+      ],
+      "ppv": [
+        0.6106,
+        0.5629,
+        0.6562
+      ]
+    }
+  },
+  "recalibration": {
+    "IDRiD all 516 (external, India, Kowa)": {
+      "alpha_miss_target": 0.03,
+      "sens_target": 0.95,
+      "rows": [
+        {
+          "audit_labels": 0,
+          "mean_missed_referable_rate": 0.0402,
+          "p90_missed_referable_rate": 0.0402,
+          "mean_auto_recall_fraction": 0.2965,
+          "op_sensitivity_mean": 0.9288,
+          "op_sensitivity_p10": 0.9288,
+          "op_specificity_mean": 0.7979,
+          "op_specificity_p10": 0.7979
+        },
+        {
+          "audit_labels": 50,
+          "mean_missed_referable_rate": 0.0092,
+          "p90_missed_referable_rate": 0.0346,
+          "mean_auto_recall_fraction": 0.0859,
+          "op_sensitivity_mean": 0.9679,
+          "op_sensitivity_p10": 0.9252,
+          "op_specificity_mean": 0.5941,
+          "op_specificity_p10": 0.1932
+        },
+        {
+          "audit_labels": 100,
+          "mean_missed_referable_rate": 0.0185,
+          "p90_missed_referable_rate": 0.0455,
+          "mean_auto_recall_fraction": 0.2076,
+          "op_sensitivity_mean": 0.9542,
+          "op_sensitivity_p10": 0.9125,
+          "op_specificity_mean": 0.7028,
+          "op_specificity_p10": 0.5637
+        },
+        {
+          "audit_labels": 200,
+          "mean_missed_referable_rate": 0.0243,
+          "p90_missed_referable_rate": 0.0496,
+          "mean_auto_recall_fraction": 0.242,
+          "op_sensitivity_mean": 0.9528,
+          "op_sensitivity_p10": 0.9154,
+          "op_specificity_mean": 0.717,
+          "op_specificity_p10": 0.6377
+        },
+        {
+          "audit_labels": 300,
+          "mean_missed_referable_rate": 0.028,
+          "p90_missed_referable_rate": 0.0531,
+          "mean_auto_recall_fraction": 0.2503,
+          "op_sensitivity_mean": 0.951,
+          "op_sensitivity_p10": 0.9172,
+          "op_specificity_mean": 0.7245,
+          "op_specificity_p10": 0.6667
+        }
+      ],
+      "site_recalibrated_triage": {
+        "recall_given_referable": 0.0228,
+        "recall_given_non_referable": 0.6068,
+        "review_given_referable": 0.2007,
+        "review_given_non_referable": 0.3801,
+        "refer_given_referable": 0.7765,
+        "refer_given_non_referable": 0.0131,
+        "audit_labels": 200
+      }
+    },
+    "Messidor-2 (external, France, Topcon)": {
+      "alpha_miss_target": 0.03,
+      "sens_target": 0.95,
+      "rows": [
+        {
+          "audit_labels": 0,
+          "mean_missed_referable_rate": 0.0569,
+          "p90_missed_referable_rate": 0.0569,
+          "mean_auto_recall_fraction": 0.6049,
+          "op_sensitivity_mean": 0.9168,
+          "op_sensitivity_p10": 0.9168,
+          "op_specificity_mean": 0.8601,
+          "op_specificity_p10": 0.8601
+        },
+        {
+          "audit_labels": 50,
+          "mean_missed_referable_rate": 0.0,
+          "p90_missed_referable_rate": 0.0,
+          "mean_auto_recall_fraction": 0.0,
+          "op_sensitivity_mean": 0.9176,
+          "op_sensitivity_p10": 0.9142,
+          "op_specificity_mean": 0.8575,
+          "op_specificity_p10": 0.8578
+        },
+        {
+          "audit_labels": 100,
+          "mean_missed_referable_rate": 0.0023,
+          "p90_missed_referable_rate": 0.0,
+          "mean_auto_recall_fraction": 0.0381,
+          "op_sensitivity_mean": 0.9607,
+          "op_sensitivity_p10": 0.9155,
+          "op_specificity_mean": 0.7005,
+          "op_specificity_p10": 0.5292
+        },
+        {
+          "audit_labels": 200,
+          "mean_missed_referable_rate": 0.0207,
+          "p90_missed_referable_rate": 0.0484,
+          "mean_auto_recall_fraction": 0.4615,
+          "op_sensitivity_mean": 0.9582,
+          "op_sensitivity_p10": 0.9196,
+          "op_specificity_mean": 0.733,
+          "op_specificity_p10": 0.6421
+        },
+        {
+          "audit_labels": 300,
+          "mean_missed_referable_rate": 0.0253,
+          "p90_missed_referable_rate": 0.0519,
+          "mean_auto_recall_fraction": 0.5032,
+          "op_sensitivity_mean": 0.9561,
+          "op_sensitivity_p10": 0.9198,
+          "op_specificity_mean": 0.7461,
+          "op_specificity_p10": 0.6597
+        }
+      ],
+      "site_recalibrated_triage": {
+        "recall_given_referable": 0.0207,
+        "recall_given_non_referable": 0.6283,
+        "review_given_referable": 0.2874,
+        "review_given_non_referable": 0.3556,
+        "refer_given_referable": 0.6919,
+        "refer_given_non_referable": 0.016,
+        "audit_labels": 200
+      }
+    }
+  }
+}

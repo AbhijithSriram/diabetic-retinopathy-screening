@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% set active = 'study' %}
+{% block title %}Reader study · DrishtiTrust{% endblock %}
+{% block body %}
+<h1>Reader study: can an ophthalmologist validate a case in under 30 seconds?</h1>
+<div class="panel">
+  <p>The ophthalmologist sees public-dataset photos (no patient data) in the same review screen the programme uses. The app records each decision and the time taken, then compares the grades with the datasets' reference grades. This measures the PS requirement directly; no dataset can.</p>
+  {% if items %}
+  <form method="post" action="/study/start" class="row">
+    <div><label>Reader initials</label><input type="text" name="reader" required></div>
+    <div><label>Number of cases</label><input type="text" name="n" value="40"></div>
+    <div style="align-self:end"><button class="primary" type="submit">Start</button></div>
+  </form>
+  <p class="small muted">{{ items|length }} cases available in app/study_set.csv.</p>
+  {% else %}<p class="notice">No study set yet. Run <code>python scripts/make_study_set.py</code> after the datasets are prepared.</p>{% endif %}
+</div>
+{% if sessions %}<div class="panel"><h2>Sessions</h2><table>
+<tr><th>Reader</th><th>Answered</th><th></th></tr>
+{% for s in sessions %}<tr><td>{{ s.reader }}</td><td>{{ s.n }}</td><td><a href="/study-results/{{ s.id }}">results</a></td></tr>{% endfor %}
+</table></div>{% endif %}
+{% endblock %}
