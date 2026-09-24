@@ -35,6 +35,16 @@ Do both. Lead with the second, because it is achievable and honest.
 
 ---
 
+> **Status, 24 September 2026 — the statistical goal is reached.** The final
+> model `ens_d3` ties IDx-DR on Messidor-2 at exam level with a threshold
+> fixed in advance (96.3% / 87.4% against 96.8% / 87.0%; AUC 0.982 against
+> 0.980; `EXPERIMENTS.md` §17). What bought it was Tier 1 data: the other
+> half of EyePACS. **1.4 RETFound was tried and rejected**: fine-tuned on the
+> same data it lost to an EfficientNet on both selection sets (§16). The
+> order-of-work table at the end of this file is historical. What remains is
+> Tier 4: the reader study, real Indian field images, and running the MATLAB
+> path on a licensed machine.
+>
 > **Status, 20 September 2026.** Measured outcomes are recorded in
 > `EXPERIMENTS.md` and marked inline below. Two Tier 3 items are dead, one
 > Tier 2 item turned into something better than it was meant to be, and the
@@ -47,7 +57,7 @@ Do both. Lead with the second, because it is achievable and honest.
 The single highest-value action. We trained on ~11k images; EyePACS adds
 35,126 from a US screening programme with varied, often poor-quality
 cameras — exactly the diversity we lack. (It is 35k, not 88k: the larger
-figure counts the test half, whose grades were never released.)
+figure counts the test half, whose grades were released later and were added on 24 Sep — see `DATASETS.md`.)
 - **How it actually happened**: the official competition download returns 403
   until the rules are accepted on kaggle.com, which is not something an
   assistant should click on someone's behalf. The mirror
@@ -211,7 +221,7 @@ Everyone has the same models and the same advice. What they cannot copy quickly:
 
 ---
 
-## Suggested order of work (one 8 GB GPU, shared with gaming)
+## Suggested order of work (one 8 GB GPU, shared with gaming) — historical, 20 Sep
 
 | Order | Task | GPU hours | State |
 |---|---|---|---|

@@ -2,8 +2,8 @@
 
 These files are the MathWorks side of the project. **None of them has been run
 yet**: no build machine so far has had a MATLAB licence. Run them on a licensed
-machine (**R2025a or later** for the ConvNeXt member's `Gelu` layer; R2024b is
-enough for an all-EfficientNet ensemble) before the demo, and fix anything that
+machine (**R2024b or later**; every network in the final model imports as
+built-in layers, so no custom-layer support is needed) before the demo, and fix anything that
 breaks. `check_export.m` is the first thing to run: it says in one line whether
 MATLAB reproduces the Python numbers.
 
@@ -23,7 +23,7 @@ MATLAB reproduces the Python numbers.
 Steps:
 
 1. In Python: `python scripts/export_matlab.py --graders <members> --ens <ensemble run>`
-   (for the current final model: `--graders v2s_all,b0_768_all,cnx_all_wd --ens ens_vrc3b`).
+   (for the current final model: `--graders v2s_d2,v2s768_d2,b0_768_d2 --ens ens_d3`).
    This writes `runs/onnx_matlab/`: one `grader_<run>.onnx` per ensemble member,
    `lesions.onnx`, `landmarks.onnx` and `manifest.json` (thresholds, triage policy,
    operator audit, parity figures, reference outputs). Before writing, it

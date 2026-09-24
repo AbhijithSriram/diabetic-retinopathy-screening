@@ -1,6 +1,6 @@
 # DrishtiTrust explained in plain words
 
-Written 20 September 2026, for the team. No jargon without a definition.
+Written 20 September 2026 for the team; numbers updated 24 September for the final model `ens_d3`. No jargon without a definition.
 Numbers here come from `results/VALIDATION.md`, which is generated from the
 raw result files.
 
@@ -54,7 +54,7 @@ versions of the code, because MathWorks sponsors this problem statement.
   which we act. A lower line catches more disease and raises more false alarms.
   The two above always trade off against each other.
 - **AUC** — how well the model *ranks* sick above healthy, independent of where
-  the line is drawn. 1.0 perfect, 0.5 a coin toss. Ours is 0.94–0.98.
+  the line is drawn. 1.0 perfect, 0.5 a coin toss. Ours is 0.95–0.99 depending on the camera.
 - **Image level vs exam level** — one photo, versus one patient visit (two
   eyes). A visit is referred if either eye looks bad, so a visit gives two
   chances for a false alarm; exam-level specificity is always the lower number.
@@ -72,11 +72,18 @@ versions of the code, because MathWorks sponsors this problem statement.
 ## 4. The datasets
 
 **Learnt from:**
-- **DDR** — 13,673 photos, hospitals across China.
-- **APTOS** — 3,662 photos from Aravind Eye Hospital, rural Tamil Nadu. This is
-  the set the problem statement itself attaches.
+- **DDR** — hospitals across China.
+- **APTOS** — Aravind Eye Hospital, rural Tamil Nadu. This is the set the
+  problem statement itself attaches.
+- **EyePACS** — about 88,700 photos from a US screening programme with many
+  different cameras (both halves of the 2015 Kaggle competition).
 
-**Tested on (never trained on):**
+**Used only to choose between models (never learnt from, never quoted as results):**
+- **ODIR** — 6,300 photos, Chinese hospitals, mixed cameras; grades read from
+  doctors' free-text notes, so noisy.
+- **DeepDRiD** — 2,000 photos from Shanghai graded by ophthalmologists.
+
+**Tested on (never trained on, looked at once per final model):**
 - **IDRiD** — 516 photos, one Indian clinic in Nanded, Kowa camera. Some have
   every lesion outlined by hand, which is how we checked the lesion finder and
   the heat map.
@@ -87,30 +94,44 @@ versions of the code, because MathWorks sponsors this problem statement.
 
 ## 5. What the numbers say
 
-| Where | Of 100 who need a specialist, we catch | Of 100 who are healthy, we wrongly send |
+| Where | Of 100 who need a specialist, we catch | Of 100 who are healthy, we correctly leave alone |
 |---|---|---|
-| Held-out photos from the sources we trained on | 94–96 | 10–14 |
-| IDRiD (unseen Indian clinic) | 93 | 26 |
-| Messidor-2, per photo (unseen French clinic) | 94 | 31 |
-| Messidor-2, per patient visit | 97 | **43** |
-| IDx-DR on those same visits | 97 | 13 |
+| Held-out photos from the sources we trained on | 95–96 | 92–93 |
+| IDRiD (unseen Indian clinic), per photo | 93 | 87 |
+| Messidor-2 (unseen French clinic), per photo | 95 | 90 |
+| Messidor-2, per patient visit | 96 | 87 |
+| **IDx-DR on those same visits** | **97** | **87** |
 
-We find the disease as well as the commercial system and we panic about healthy
-people about three times as often.
+The problem statement asks for more than 90 caught and more than 85 left
+alone. **We meet that on both cameras we have never seen.** On Messidor-2,
+per patient visit, we land on the commercial system's published numbers:
+96.3% / 87.4% against its 96.8% / 87.0%, and a ranking score (AUC, see
+below) of 0.982 against 0.980.
 
-**Is that just a badly placed cutoff?** No. Cheating by picking the best
-possible cutoff using the Messidor-2 answers themselves, the choices are:
+**Is that "beating IDx-DR"?** No: it is a tie. With 874 visits, the
+uncertainty on each of those numbers is about ±3 points, so neither system is
+measurably better. And IDx-DR also checks photo quality and looks at both
+eyes together in ways our number does not. A tie with an FDA-authorised
+device, on a camera we never trained on, with the cutoff fixed before we
+looked, is the honest claim.
 
-| Cutoff | Sensitivity | Specificity |
+**What AUC means, in one line:** take one eye that needs a specialist and one
+that does not; AUC is how often the model gives the sick eye the higher
+score. 0.5 is a coin toss, 1.0 is perfect.
+
+**How it got here** (Messidor-2, per patient visit, AUC):
+
+| Model | When | AUC |
 |---|---|---|
-| ours, frozen in advance | 96.7% | 57.0% |
-| best possible at that sensitivity | 97.0% | 52.3% |
-| best possible at 90% sensitivity | 90.0% | 75.0% |
-| best possible at IDx-DR's specificity | 84.8% | 87.0% |
+| First honest model | 19 Sep, laptop | 0.939 |
+| + EyePACS, bigger networks, ensemble | 21 Sep, laptop | 0.959 |
+| Trained properly on a 32 GB GPU | 24 Sep, workstation | 0.965 |
+| **+ the other half of EyePACS** | **24 Sep, workstation** | **0.982** |
 
-No cutoff reaches 96.8 / 87.0. **The model itself is weaker**, not just the
-dial. (On IDRiD the dial did matter: the frozen cutoff was much worse than the
-best available one.)
+Nearly all of it came from data: more photographs from more cameras. Ideas
+that sounded clever (combining both eyes, re-tuning the cutoff from unlabelled
+photos, a cheap-camera simulator, a retinal "foundation model" called
+RETFound) were built, measured and rejected.
 
 ## 6. The three findings that matter
 
@@ -141,30 +162,28 @@ photos are detected at 0.993 AUC.
 
 ## 7. The conclusion
 
-**The system works and it is not deployable.** Both are true.
+**The system works, and on public data it now matches a certified
+commercial device.** It is still not deployable: it has not been tested on a
+real Indian phone camera, and no ophthalmologist has yet timed the 30-second
+review.
 
-On data resembling its training it meets the problem statement's targets
-(>90% sensitivity, >85% specificity). On a camera it has never seen it still
-catches the disease but over-refers the healthy. Because the ranking quality
-holds up, the model is not blind — it cannot tell where "normal" sits on an
-unfamiliar camera, and it is genuinely weaker than a certified commercial
-device.
+**What to say in the pitch:**
 
-**What to say in the pitch**, which is stronger than a fake 95%:
-
-- Every other team quotes one number from one dataset. We show what happens on
-  a camera the model never saw, which is exactly where real deployments fail.
-- Our design already answers it: uncertain cases go to a 30-second remote look
-  by an eye doctor instead of a bus ride to a hospital, so a false alarm costs
-  seconds rather than a lost day's wages.
-- The honest claim: *catches 95+% of disease; on a new camera roughly a third
-  of healthy patients get a 30-second tele-review, falling as the site
-  accumulates a few hundred locally graded photos.*
+- We meet the problem statement's target on two cameras and countries the
+  model never saw, with the cutoff fixed in advance.
+- On IDx-DR's own test photographs we tie IDx-DR. We say "tie", because
+  that is what the uncertainty allows.
+- Uncertain cases go to a 30-second remote look by an eye doctor instead of
+  a forced yes/no. On the 78% of photographs the system decides by itself, it
+  catches 98.5% of the disease.
+- Every number was obtained without peeking: models were chosen on two
+  practice sets, the choice was written down before the real test, and every
+  look at the real test is logged (`docs/EXPERIMENTS.md`).
 
 ## 8. What is not done
 
 - MATLAB and Simulink scripts are written but have never been run (no licence
-  on the build machine).
+  on any build machine so far). `matlab/check_export.m` is the first test.
 - No test on a real Indian phone-camera dataset.
 - No measurement of a real ophthalmologist's review time — that is what the
   Aravind contact is for (`docs/READER_STUDY.md`).
@@ -173,18 +192,19 @@ device.
 ## 9. Where things are
 
 ```
-C:\Users\abhij\SIH\26038\
-├── data\raw\          DDR, APTOS, IDRiD, Messidor-2, HRF (not in git)
-├── data\processed\    cached crops + manifest.csv (the split table)
-└── drishtitrust\
-    ├── drishti\       the pipeline (quality, grading, lesions, landmarks,
+SIH26038/
+├── data/raw/          DDR, APTOS, EyePACS, IDRiD, Messidor-2, DeepDRiD, HRF (not in git)
+├── data/processed/    cached crops + manifest.csv (the split table)
+└── drishtitrust/      github.com/AbhijithSriram/diabetic-retinopathy-screening
+    ├── drishti/       the pipeline (quality, grading, lesions, landmarks,
     │                  vessels, rules, conformal triage, explain, report)
-    ├── app\           the web app (field, review, referrals, dashboard, study)
-    ├── sim\           district simulation
-    ├── matlab\        MATLAB + Simulink scripts (untested)
-    ├── runs\          trained models + ONNX exports
-    ├── results\       VALIDATION.md and the raw JSON behind it
-    └── docs\          DATASETS, LIMITATIONS, READER_STUDY, this file, IDEAS
+    ├── app/           the web app (field, review, referrals, dashboard, study)
+    ├── sim/           district simulation
+    ├── matlab/        MATLAB + Simulink scripts (untested)
+    ├── runs/          trained models + ONNX exports (not in git; MATLAB
+    │                  models are a GitHub release)
+    ├── results/       VALIDATION.md and the raw JSON behind it
+    └── docs/          DATASETS, EXPERIMENTS, LIMITATIONS, READER_STUDY, IDEAS, this file
 ```
 
 Read `results/VALIDATION.md` first. Every number in it is generated by

@@ -591,6 +591,125 @@ on MATLAB compatibility before this look; reverting to `ens_vrc3b` because
 its frozen Messidor-2 specificity is 1.6 points higher would be choosing a
 model by its score on the sealed set.
 
+### 16. More data, a second selection set, and a foundation model that lost (24 September)
+
+**Data.** The EyePACS 2015 test half (53,572 images, the competition's
+released grades) was appended as training data, and DeepDRiD (2,000
+photographs graded by ophthalmologists, Shanghai) as a second selection set
+beside ODIR (`docs/DATASETS.md`). Doubling EyePACS moved EfficientNetV2-S at
+512 from ODIR 0.9403 / DeepDRiD 0.9570 (`v2s_e15`) to **0.9428 / 0.9747**
+(`v2s_d2`).
+
+**The two selection sets disagree, which is the reason to have two.**
+DeepDRiD ranks ConvNeXt first where ODIR ranks it last, and it scores the
+longer-trained networks of section 15 slightly *below* the laptop ones that
+ODIR scored below them. A second training seed of one recipe moved ODIR by
+0.005. From here on candidates are ranked on the mean of the two sets.
+
+**Leave-one-dataset-out** (EfficientNet-B0 at 512, same recipe; full table in
+`results/lodo_report.txt`):
+
+| Left out | DDR test | APTOS test | ODIR | DeepDRiD |
+|---|---|---|---|---|
+| DDR | **−0.015** | +0.002 | −0.002 | +0.010 |
+| APTOS | +0.001 | **−0.018** | −0.002 | +0.001 |
+| EyePACS | −0.003 | +0.000 | **−0.042** | **−0.019** |
+
+A hospital system the model has never seen costs 0.015–0.018 AUC even with
+~40,000 other training images; EyePACS is what makes the model generalise to
+unseen cameras, reproducing section 10's +0.037 independently.
+
+**RETFound, as a teacher: rejected.** The plan was to fine-tune RETFound-MAE
+(ViT-Large pretrained on 904,000 retinal photographs; its pretraining data,
+Moorfields and Kaggle EyePACS, was checked to contain none of our held-out
+sets) and distil it into an EfficientNet, because a ViT does not import
+cleanly into MATLAB. Fine-tuned on the same 98,768 images at 448 px with
+layer-wise learning-rate decay, 4 epochs, it reached ODIR **0.8846** and
+DeepDRiD 0.9654 --- below the EfficientNet it was meant to teach on both. A
+student distilled from a weaker teacher is pulled down, and adding RETFound
+to any ensemble lowered the selection score, so the distillation runs were
+cancelled before they started. Plausible causes, none tested: 448 px is
+small for microaneurysms that our CNNs see at 512–768; RETFound was fed plain
+crops rather than the Graham-normalised input the CNNs get; and four epochs
+may be too few for a 300M-parameter model. The foundation-model audit that
+preceded it excluded FLAIR and UrFound outright (pretrained with labels on
+IDRiD, Messidor, ODIR and DeepDRiD) and restricted RETFound-Green (pretrained
+on all of DDR and ODIR) to DeepDRiD-only judgement.
+
+---
+
+### 17. Final model `ens_d3`: the same three EfficientNets, trained on twice the EyePACS data
+
+After RETFound was rejected, the two 768-px members were retrained on the
+98,768-image pool as well: `v2s768_d2` (ODIR 0.9479, DeepDRiD 0.9759, the
+best single model on both) and `b0_768_d2` (0.9473 / 0.9737).
+
+**Selection rule, written at 16:55 on 24 Sep, before `b0_768_d2` had a
+score** (`overnight/STATUS.md` on the workstation): the final model is the
+ensemble of up to four members with the highest mean of ODIR and DeepDRiD
+AUC whose members are all EfficientNets; one containing ConvNeXt or RETFound
+replaces it only if it leads by more than 0.005.
+
+| Ensemble | ODIR | DeepDRiD | mean |
+|---|---|---|---|
+| best overall (+ `cnx_all_wd`) | 0.9503 | 0.9797 | 0.9650 |
+| **`ens_d3` = `v2s_d2` + `v2s768_d2` + `b0_768_d2`** | **0.9515** | **0.9777** | **0.9646** |
+| `ens_e3` (section 15, previous final) | 0.9464 | 0.9629 | 0.9547 |
+
+The ConvNeXt lead is 0.0004, so the rule selects **`ens_d3`**. With twice the
+data, the ConvNeXt advantage DeepDRiD showed in the morning (section 16) has
+all but disappeared, and the MATLAB-native choice costs nothing. Its triage
+policy was fitted on valB alone (`grader_eval.py --policy-only`).
+
+**Commitment, 18:00 on 24 Sep, before the look below:** `ens_d3` is the
+candidate to replace `ens_e3`. It is scored once on IDRiD and Messidor-2 and
+the result is reported here whatever it says.
+
+**The look (18:10, one run of `grader_eval --grader ens_d3 --rules seg_r34`):**
+
+| | `ens_e3` | **`ens_d3`** | IDx-DR (Abramoff 2016) |
+|---|---|---|---|
+| Messidor-2 per image, AUC | 0.967 | **0.982** (0.976–0.987) | – |
+| Messidor-2 per image, frozen threshold | 91.7% / 86.0% | **95.2% (92.8–96.8) / 89.6% (87.8–91.1)** | – |
+| Messidor-2 exam level, AUC | 0.965 | **0.982** (0.974–0.988) | 0.980 (0.968–0.992) |
+| Messidor-2 exam level, frozen threshold | 93.7% / 80.1% | **96.3% (93.3–98.0) / 87.4% (84.5–89.8)** | 96.8% (93.3–98.8) / 87.0% (84.2–89.4) |
+| exam-level curve at 96.8% sensitivity → specificity | 69.5% | **86.9%** | 87.0% |
+| exam-level curve at 87.0% specificity → sensitivity | 90.7% | **96.7%** | 96.8% |
+| IDRiD, AUC | 0.964 | **0.976** (0.965–0.985) | – |
+| IDRiD, frozen threshold | 92.9% / 79.8% | **93.2% / 87.1%** | – |
+| DDR test, AUC | 0.989 | 0.986 | – |
+
+What it says:
+
+- **At exam level, with the threshold fixed in advance on valB, `ens_d3`
+  lands on IDx-DR's published operating point**: 96.3% / 87.4% against
+  96.8% / 87.0%, AUC 0.982 against 0.980. Every interval overlaps almost
+  entirely. This is a statistical tie with a certified commercial device, not
+  a win, and it should be described that way; IDx-DR also judges image
+  quality and both eyes together in ways our number does not.
+- **The problem statement's >90% / >85% target is now met per image on both
+  external sets**, and on Messidor-2 the whole sensitivity interval clears
+  90% (92.8% lower bound) for the first time.
+- **The conformal guarantee holds on the unseen camera.** 5 of 457 referable
+  Messidor-2 photographs (1.1%, CI 0.5–2.5%) were auto-cleared, inside the 3%
+  bound; `ens_vrc3b` let through 6.6%. On the 78% of photographs the system
+  decides by itself, it catches 98.5% of referable disease and clears 98.5%
+  of healthy eyes; the other 22% go to review.
+- **DeepDRiD predicted this and ODIR did not.** The ODIR gain over `ens_e3`
+  was 0.005; DeepDRiD's was 0.015, the size of the gain the sealed sets then
+  showed. That is the strongest evidence yet that the second, expert-graded
+  selection set was worth adding.
+
+Leakage check before believing it: the new data (EyePACS test half) was
+compared image by image with every Messidor-2 and IDRiD photograph. The
+closest match has retina-signature correlation 0.74 (IDRiD 0.76); the
+same-eye threshold is 0.80, and two unrelated datasets (DDR vs Messidor-2)
+reach 0.75. Nothing leaked.
+
+`ens_d3` replaces `ens_e3` as the final model.
+
+---
+
 ## Looks at held-out data
 
 ODIR is deliberately absent from this register. It is the designated
@@ -610,6 +729,7 @@ on 20 September was made there so that the two sets below stayed sealed.
 | 21 Sep | IDRiD, Messidor-2 | **full evaluation of the final candidate `ens_data3`**, plus its ROC at matched operating points | experiment 12: one look, on a model selected entirely on ODIR |
 | 21 Sep | IDRiD, Messidor-2 | **full evaluation of `ens_vrc3b`**, the final model | experiment 14: committed to on ODIR before looking, reported as it came out |
 | 24 Sep | IDRiD, Messidor-2 | **full evaluation of `ens_e3`**, plus its exam-level ROC at matched operating points (and `ens_vrc3b`'s, recomputed to check the method) | experiment 15: selected on ODIR by a rule written before the last candidate was scored, committed to in writing, scored once, reported as it came out |
+| 24 Sep | IDRiD, Messidor-2 | **full evaluation of `ens_d3`**, plus its exam-level ROC at matched operating points | experiment 17: selected on ODIR + DeepDRiD by a rule written before the last member was scored, committed to in writing, scored once, reported as it came out; followed by a leakage check of the new training data against both sealed sets |
 
 Nothing in this file was selected by its score on a held-out set. Experiments
 1 and 2 were rejected on those sets, which is the safe direction: we are

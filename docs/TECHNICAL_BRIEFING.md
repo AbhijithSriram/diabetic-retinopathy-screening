@@ -53,18 +53,20 @@ doctor. On the same public test photographs IDx-DR was evaluated on, taken on
 a camera in a country our model has never seen, and with the decision
 threshold fixed *in advance*:
 
-| | Sensitivity (catches disease) | Specificity (spares the healthy) |
-|---|---|---|
-| **Problem statement target** | > 90% | > 85% |
-| **DrishtiTrust, per photograph** | **91.5%** | **87.6%** |
-| **DrishtiTrust, per patient visit** | **93.3%** | **82.5%** |
-| IDx-DR, per patient visit (published) | 96.8% | 87.0% |
+| | Sensitivity (catches disease) | Specificity (spares the healthy) | AUC |
+|---|---|---|---|
+| **Problem statement target** | > 90% | > 85% | – |
+| **DrishtiTrust, per photograph** | **95.2%** | **89.6%** | 0.982 |
+| **DrishtiTrust, per patient visit** | **96.3%** | **87.4%** | 0.982 |
+| IDx-DR, per patient visit (published) | 96.8% | 87.0% | 0.980 |
 
-**We meet the problem statement's target per photograph on unseen data. We
-do not beat IDx-DR**, and this document does not pretend otherwise. What we
-can claim is that we closed about a third of the gap in a single night of
-work, that we know precisely *why* the rest remains, and that every number
-here was obtained in a way a sceptical reviewer can audit.
+**We meet the problem statement's target on both unseen cameras, and per
+patient visit we land on IDx-DR's published operating point.** That is a
+statistical tie with a certified commercial device, not a win: with 874
+visits every figure carries about ±3 points of uncertainty, and IDx-DR also
+judges photo quality and both eyes together in ways our number does not. We
+got here from 57% specificity at that sensitivity five days earlier, and we
+know precisely which changes bought it --- almost all of it was data.
 
 **What makes this different from other entries.** Not the model — every team
 has access to the same models. What is unusual is the discipline around it:
@@ -866,57 +868,55 @@ All of it on one laptop GPU with 8 GB of memory, in about twelve hours.
 
 ## 9. Final results
 
-Final model: `ens_vrc3b`. Chosen on ODIR, committed to in writing, then
-scored once on the sealed sets. Every figure uses the threshold **fixed in
-advance** on our own calibration data, unless explicitly marked otherwise.
-Ranges in brackets are 95% confidence intervals: with this much data, the
-true value very probably lies inside them.
+Final model: `ens_d3`, three EfficientNets (V2-S at 512, V2-S at 768, B0 at
+768) trained on DDR + APTOS + both halves of EyePACS. Chosen on two held-out
+selection sets (ODIR and DeepDRiD) by a rule written down before the last
+candidate was scored, committed to in writing, then scored once on the
+sealed sets. Every figure uses the threshold **fixed in advance** on our own
+calibration data, unless explicitly marked otherwise. Ranges in brackets are
+95% confidence intervals.
 
 ### 9.1 Detecting referable DR
 
 | Test set | What it is | AUC | Sensitivity | Specificity | PS target (>90 / >85)? |
 |---|---|---|---|---|---|
-| DDR test | Familiar cameras, held out | 0.986 | 94.7% | 93.2% | ✅ |
-| APTOS test | Familiar cameras, held out | 0.985 | 97.7% | 90.3% | ✅ |
-| **Messidor-2, per photo** | **Unseen French camera** | **0.963** | **91.5%** (88.5–93.7) | **87.6%** (85.7–89.3) | ✅ |
-| Messidor-2, per visit | Unseen, IDx-DR's measure | 0.959 | 93.3% (89.7–95.7) | 82.5% (79.2–85.3) | ✗ specificity |
-| IDRiD, per photo | Unseen Indian camera | 0.958 | 93.5% | 73.6% | ✗ specificity |
+| DDR test | Familiar cameras, held out | 0.986 | 95.1% | 93.4% | ✅ |
+| APTOS test | Familiar cameras, held out | 0.986 | 96.2% | 91.9% | ✅ |
+| **Messidor-2, per photo** | **Unseen French camera** | **0.982** | **95.2%** (92.8–96.8) | **89.6%** (87.8–91.1) | ✅ |
+| **Messidor-2, per visit** | Unseen, IDx-DR's measure | **0.982** | **96.3%** (93.3–98.0) | **87.4%** (84.5–89.8) | ✅ |
+| **IDRiD, per photo** | Unseen Indian camera | **0.976** | **93.2%** (89.9–95.5) | **87.1%** (81.6–91.1) | ✅ (point estimate) |
 
-**Reading this honestly.** On Messidor-2 per photograph, both numbers clear
-the target. The specificity interval clears 85% entirely; the sensitivity
-interval's lower edge (88.5%) does not clear 90%, so a stricter reading would
-call that half "probably met". Per patient visit, specificity falls short by
-2.5 points, because two eyes mean two chances for a false alarm. On the
-Indian IDRiD camera, specificity is well short — IDRiD is the harder,
-higher-disease set, and it is where the per-site recalibration of stage 7
-earns its place.
+**Reading this honestly.** On Messidor-2 both numbers clear the target with
+their whole intervals, per photograph. On IDRiD both point estimates clear
+it; the intervals are wide because the set is small (516 photos), so a
+stricter reading calls IDRiD "met, probably".
 
 ### 9.2 Against IDx-DR
 
-The fair comparison is between whole curves, because the two systems'
-thresholds were set by different people for different purposes. These rows
-are read off the curve by asking *"if our threshold were placed here, what
-would the other number be?"* They describe what the model can
-distinguish; they are **not** thresholds we could have set without the test
-labels, and are not claimed as achieved performance.
-
-| Matched at… | IDx-DR | DrishtiTrust |
+| | IDx-DR (Abramoff 2016) | DrishtiTrust `ens_d3` |
 |---|---|---|
-| IDx-DR's 96.8% sensitivity → specificity | 87.0% | 64.9% |
-| IDx-DR's 87.0% specificity → sensitivity | 96.8% | 92.2% |
-| Exam-level AUC | ≈0.98 (implied by their operating point) | 0.959 |
+| Sensitivity, per visit | 96.8% (93.3–98.8) | 96.3% (93.3–98.0) |
+| Specificity, per visit | 87.0% (84.2–89.4) | 87.4% (84.5–89.8) |
+| AUC, per visit | 0.980 (0.968–0.992) | 0.982 (0.974–0.988) |
 
-**IDx-DR's published point sits above our curve.** At their sensitivity, we
-give up 22 points of specificity. That gap was 35 points when the night
-began.
+Read off our curve (curve comparisons, not thresholds we could have set in
+advance): at IDx-DR's 96.8% sensitivity our specificity is 86.9%; at its
+87.0% specificity our sensitivity is 96.7%.
+
+**The two systems are statistically indistinguishable on these
+photographs.** Our operating point was fixed on our own calibration data
+before Messidor-2 was scored, so this is not a tuned result. What we do not
+claim: that we beat it, or that we would match it prospectively in clinics,
+where IDx-DR's own sensitivity dropped by about ten points.
 
 ### 9.3 Progress, on the sealed set
 
-| Model | Messidor-2 AUC per photo | per visit | Specificity per photo (frozen) |
+| Model | Date | Messidor-2 AUC per visit | Specificity at 96.8% sensitivity |
 |---|---|---|---|
-| Starting model | 0.940 | 0.939 | 69.5% |
-| Mid-night ensemble | 0.957 | 0.953 | 82.6% |
-| **Final** | **0.963** | **0.959** | **87.6%** |
+| First honest model (`b0_final`) | 19 Sep | 0.939 | 52.3% |
+| Laptop final (`ens_vrc3b`) | 21 Sep | 0.959 | 64.9% |
+| Properly trained (`ens_e3`) | 24 Sep | 0.965 | 69.5% |
+| **+ EyePACS test half (`ens_d3`)** | **24 Sep** | **0.982** | **86.9%** |
 
 ### 9.4 The deferral advantage
 
@@ -925,20 +925,17 @@ follows:
 
 | | All photos | Of those needing a specialist | Of healthy photos |
 |---|---|---|---|
-| Cleared automatically | 59.1% | 6.6% | 77.7% |
-| Sent for 30-second review | 19.5% | 17.9% | 20.1% |
-| Referred automatically | 21.4% | 75.5% | 2.2% |
+| Cleared automatically | 57.6% | 1.1% | 77.7% |
+| Sent for 30-second review | 22.4% | 26.0% | 21.1% |
+| Referred automatically | 20.0% | 72.9% | 1.2% |
 
-So the system decides **about 80% of photographs by itself**. On those, it
-catches 92% of disease and is right about the healthy **97%** of the time.
-The other 20% reach a doctor, who looks for 30 seconds instead of a patient
-travelling for a day.
-
-The caution that belongs next to this: the 6.6% of referable photos that
-were auto-cleared exceed the 3% guarantee on this unseen camera, and the
-fix is the local audit described in stage 7. The "doctor resolves the
-review cases correctly" part is an assumption until the reader study
-measures it.
+So the system decides **about 78% of photographs by itself**. On those, it
+catches **98.5%** of disease and correctly clears **98.5%** of healthy eyes.
+The other 22% reach a doctor, who looks for 30 seconds instead of a patient
+travelling for a day. The share of referable photographs auto-cleared (1.1%,
+5 of 457) is inside the 3% conformal guarantee on this unseen camera; with
+the previous model it was 6.6%. The "doctor resolves the review cases
+correctly" part is an assumption until the reader study measures it.
 
 ### 9.5 The other modules
 
@@ -949,6 +946,8 @@ measures it.
 | Optic disc / fovea | 13 px / 32 px mean error on 4,288-px images | — |
 | Blood vessels | AUC 0.980 | — |
 | Heat map vs expert markings | 2.3× chance; hottest point on a lesion 88% (chance 29%) | Rarely measured at all |
+
+(The heat-map figures were measured on the earlier single model `b0_final`.)
 
 ---
 
@@ -964,8 +963,9 @@ Honest calibration, in both directions.
   familiar-camera numbers (0.985–0.986 AUC) would look as good as anyone's.
   We lead with the harder number instead, because it is the one that predicts
   field performance.
-- **The problem statement's accuracy target is met on an unseen camera,**
-  per photograph, with a threshold fixed in advance.
+- **The problem statement's accuracy target is met on two unseen cameras,**
+  with a threshold fixed in advance, and per patient visit the result ties
+  IDx-DR's published operating point on IDx-DR's own test photographs.
 - **A dataset flaw that likely inflates other teams' results**, discovered,
   documented and verifiable in minutes.
 - **An explainability claim backed by measurement** against specialists'
@@ -983,14 +983,13 @@ The landmark study in this field (Gulshan et al., *JAMA*, 2016, Google)
 reached AUC **0.990** on Messidor-2. It used about **128,000** training
 images, each graded by **three to seven** ophthalmologists who had to agree.
 
-We reached **0.963** per photograph with about **45,000** images, each
-graded by **one** person. The gap between those two numbers is mostly
-explained by those two differences, and the second — label quality — cannot
-be fixed with public data (section 12.1).
+We reached **0.982** per photograph with about **99,000** images, each
+graded by **one** person. The remaining gap is mostly label quality, which
+cannot be fixed with public data (section 12.1).
 
 ### 10.3 What it is not
 
-- It does not beat IDx-DR.
+- It does not beat IDx-DR; it ties it, on one public set of photographs.
 - It has not been tested prospectively on patients, which is where even
   IDx-DR's sensitivity fell by about ten points.
 - It has not been tested on a real Indian handheld camera (section 11).
@@ -999,9 +998,10 @@ be fixed with public data (section 12.1).
 ### 10.4 The honest summary
 
 Judged as a hackathon system: unusually rigorous and unusually complete,
-with a headline accuracy that clears the brief on unseen data. Judged
-against a certified commercial device: meaningfully behind, with a clear,
-measured explanation of why and a credible path to narrowing the gap.
+with accuracy that clears the brief on two unseen cameras. Judged against a
+certified commercial device on the same retrospective photographs: level,
+within the uncertainty. Judged as a medical device: untested where it
+matters most, on Indian handheld cameras and with real reviewers.
 
 ---
 
@@ -1013,99 +1013,64 @@ measured explanation of why and a credible path to narrowing the gap.
    cameras.
 2. **Single-grader training labels.** EyePACS, DDR and APTOS are graded by
    one reader per image. This caps achievable accuracy.
-3. **Specificity misses on IDRiD and at exam level on Messidor-2.**
+3. **Retrospective only.** Every figure is on archived photographs; IDx-DR's
+   own sensitivity fell by about ten points in its prospective trial.
 4. **The safety guarantee needs local calibration** on every new camera —
-   200–300 locally graded photos — before it holds.
+   200–300 locally graded photos — before it can be relied on, even though it
+   held on Messidor-2.
 5. **The 30-second review claim is unmeasured.** The timing tool is built;
    the reader study has not yet happened.
-6. **The MATLAB and Simulink ports have not been executed** — there was no
-   MATLAB licence on the build machine. ONNX export was verified for the
-   earlier single model (output difference 3×10⁻⁵ against PyTorch); the three
-   ensemble members have not yet been exported.
-7. **The app still serves an earlier single model.** Wiring the
-   three-network ensemble into the serving path is outstanding work.
-8. **Neovascularisation is not segmented**; the only public pixel labels
+6. **The MATLAB and Simulink ports have not been executed** — no build
+   machine has had a MATLAB licence. The exported networks are checked
+   against PyTorch and use only built-in MATLAB layers, and the MATLAB
+   ensemble recipe is replayed in Python against the final predictions;
+   `matlab/check_export.m` is the first thing to run on a licensed machine.
+7. **Neovascularisation is not segmented**; the only public pixel labels
    (FGADR, 49 images) are available on request only.
-9. **Referral-attendance figures in the simulation are assumptions**, not
+8. **Referral-attendance figures in the simulation are assumptions**, not
    measurements.
-10. **Training was compute-limited** (section 12.2): the models were still
-    improving when training stopped.
+9. **The heat-map validation was done on an earlier single model** and has
+   not been repeated on `ens_d3`.
 
 ---
 
 ## 12. How much further it can go, and the plan
 
-### 12.1 The ceiling, stated first
+### 12.1 Where the ceiling is
 
-To match IDx-DR's published point, we estimate an exam-level AUC around
-**0.98** is needed. We are at **0.959**.
+Five days ago this section estimated that matching IDx-DR needed an AUC of
+about 0.98 and that public data would plausibly stop near 0.97. The final
+model reached 0.982 on Messidor-2. The lever was not computation or a
+cleverer model: it was the second half of EyePACS, 53,572 more photographs
+from many more cameras. Label quality is still the ceiling above that ---
+our teachers are single graders, IDx-DR's and Gulshan et al.'s were panels
+of specialists --- and no amount of computation removes it.
 
-More data and more computation can plausibly reach **about 0.97**. The last
-step is harder, because of **label noise**: our training labels come from
-one grader each, while Messidor-2's test labels were agreed by several
-retina specialists. A model cannot learn to be more precise than its
-teachers. Gulshan et al. reached 0.99 with multi-grader labels; no public
-dataset of that quality and size exists for us to use. So the realistic goal
-is *to match IDx-DR's sensitivity, come close on specificity, and use the
-deferral design to exceed it on the cases we decide ourselves* — not to beat
-it outright on its own terms.
+### 12.2 What more computation bought
 
-### 12.2 More computation
-
-Everything so far ran on one laptop GPU with 8 GB of memory and 31 GB of
-system memory. That was the binding constraint:
-
-- Training crashed twice from running out of memory, forcing smaller data
-  pipelines; at high resolution the GPU sat idle a third of the time,
-  starved of images.
-- **Every model is undertrained**: 6–8 passes over the data, where published
-  work at this scale uses 20–50. Several were still improving on the final
-  pass.
-- **No systematic tuning**: one guessed setting for ConvNeXt cost a full
-  training run to discover.
-- **RETFound was impossible**: a retinal *foundation model* (Zhou et al.,
-  *Nature*, 2023) pretrained on about **1.6 million** retinal images, with
-  public weights. Fine-tuning it needs roughly 24 GB of GPU memory.
-
-Three workstations have been offered: one with an **RTX 5000 Ada (32 GB)**
-and two with **RTX 4070s (12 GB)**, with 32–128 GB of system memory. They
-would allow:
-
-| Machine | Role |
-|---|---|
-| RTX 5000 Ada, 32 GB | **RETFound fine-tuning**; very high resolution; large batches |
-| RTX 4070, 128 GB RAM | High-resolution training with a full data pipeline; all preprocessing |
-| RTX 4070, 32 GB RAM | Parallel candidate training and evaluation |
-
-The larger structural gain is **parallelism**: last night was six training
-runs, strictly one after another. Three machines make proper hyperparameter
-searches and multi-seed ensembles feasible in the same time.
+Moving from an 8 GB laptop GPU to a 32 GB workstation let every network
+train to convergence (10–15 passes instead of 3–7), which was worth about
++0.005–0.008 AUC per network on the selection sets, and made RETFound
+fine-tuning possible. RETFound, the retinal foundation model, then lost to a
+properly trained EfficientNet on both selection sets and was rejected
+(`docs/EXPERIMENTS.md` §16).
 
 ### 12.3 More data
 
 | Dataset | Size | Why it matters | Access |
 |---|---|---|---|
-| **mBRSET** | 5,164 | **The only public handheld/smartphone DR set** — tests our actual weakness | PhysioNet credentialed access (training course, application, data-use agreement; approval takes days to weeks) |
+| **mBRSET** | 5,164 | **The only public handheld/smartphone DR set** — tests our actual weakness | PhysioNet credentialed access |
 | BRSET | 16,266 | Brazilian hospital cameras, more diversity | Same PhysioNet credentialing |
-| RFMiD | 3,200 | Indian (Nanded), multi-disease labels | Public on Kaggle |
 | FGADR | 2,842 | Pixel-level lesion annotations, including neovascularisation | Request to authors |
-| DeepDRiD | 2,000 | Paired views per patient | Challenge registration |
-| AIROGS + EyePACS test half | ~167,000 | Unlabelled, but ideal for self-supervised pretraining | Challenge registration / already public |
 
 ### 12.4 The plan, in priority order
 
-1. **Start PhysioNet credentialing now.** mBRSET is the single most relevant
-   dataset in existence for our problem and has the longest lead time.
-2. **Fine-tune RETFound** on the 32 GB machine and add it to the committee.
-   Pretraining on 1.6 million retinal images is 35 times our training set;
-   this is the largest remaining technical lever.
-3. **Retrain the committee properly** — 20–30 passes over the data instead
-   of 6–8, with systematic tuning across three machines.
-4. **Add RFMiD, FGADR and DeepDRiD.**
-5. **Validate on mBRSET** once access arrives: the first real handheld-camera
-   number, and the one a rural-screening judge most wants to see.
-6. **Wire the ensemble into the app**, re-export to ONNX, and run the MATLAB
-   and Simulink ports on a licensed machine.
+1. **Run the MATLAB path on a licensed machine** (`check_export.m`, then
+   `run_pipeline.m` and the Simulink model), and fix whatever breaks.
+2. **Start PhysioNet credentialing** and validate on mBRSET: the first real
+   handheld-camera number.
+3. **Run the reader study** with a practising ophthalmologist.
+4. **Repeat the heat-map validation** on the final ensemble.
 
 ### 12.5 The things no amount of computation can buy
 

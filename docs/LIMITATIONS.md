@@ -47,7 +47,12 @@
     open technical item.
 12. **IDRiD was scored during development** (two grader runs, plus the
     lesion-confidence diagnosis), so it is no longer a pristine test set.
-    Messidor-2 was kept sealed until the final model and scored once.
+    Messidor-2 has been scored once per final candidate (four models over
+    19–24 September), each time after the model was committed to in writing;
+    every look is in the register at the end of `EXPERIMENTS.md`. Four looks
+    is not one, and a sceptical reader should discount the final figures
+    slightly for it --- though no model was ever chosen by its sealed-set
+    score.
 13. **No real patient data was used, and none may be used** without ethics
     committee approval, informed consent and compliance with the DPDP Act
     2023.

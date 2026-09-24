@@ -6,16 +6,16 @@ Thresholds were fitted on the calibration split (valB) only and frozen before an
 
 ## 1. Referable-DR grading (PS target: sensitivity > 90%, specificity > 85%)
 
-Operating point λ_op = 0.3590 (chosen on valB for ≥95% sensitivity). Triage: auto-recall below λ_low = 0.2622 (CRC, target ≤3% of referable auto-recalled), direct referral at or above λ_high = 0.8488. Prediction sets target 90% coverage.
+Operating point λ_op = 0.3947 (chosen on valB for ≥95% sensitivity). Triage: auto-recall below λ_low = 0.2186 (CRC, target ≤3% of referable auto-recalled), direct referral at or above λ_high = 0.9221. Prediction sets target 90% coverage.
 
 | Test set | Images | AUC | Sensitivity | Specificity | QWK | ECE | Meets PS target |
 |---|---|---|---|---|---|---|---|
-| valB (calibration, for reference) | 1505 | 0.983 (0.978–0.988) | 95.2% (93.2–96.5) | 92.4% (90.4–94.0) | 0.932 | 0.028 | yes |
-| DDR test (internal) | 2503 | 0.989 (0.986–0.992) | 95.1% (93.7–96.2) | 93.7% (92.3–94.9) | 0.932 | 0.021 | yes |
-| APTOS test (internal) | 534 | 0.987 (0.981–0.993) | 96.7% (93.4–98.4) | 91.0% (87.3–93.6) | 0.943 | 0.029 | yes |
-| ODIR (held-out, China, mixed cameras) | 6228 | 0.946 (0.937–0.954) | 94.0% (92.5–95.3) | 75.4% (74.2–76.5) | 0.563 | 0.177 | no |
-| IDRiD all 516 (external, India, Kowa) | 516 | 0.964 (0.950–0.976) | 92.9% (89.5–95.2) | 79.8% (73.6–84.9) | 0.825 | 0.047 | no |
-| Messidor-2 (external, France, Topcon) | 1744 | 0.967 (0.957–0.976) | 91.7% (88.8–93.9) | 86.0% (84.0–87.8) | 0.708 | 0.090 | point estimate only |
+| valB (calibration, for reference) | 1505 | 0.981 (0.974–0.986) | 95.2% (93.2–96.5) | 92.7% (90.7–94.2) | 0.921 | 0.022 | yes |
+| DDR test (internal) | 2503 | 0.986 (0.982–0.990) | 95.1% (93.7–96.2) | 93.4% (92.0–94.6) | 0.919 | 0.015 | yes |
+| APTOS test (internal) | 534 | 0.986 (0.979–0.992) | 96.2% (92.8–98.1) | 91.9% (88.4–94.4) | 0.929 | 0.027 | yes |
+| ODIR (held-out, China, mixed cameras) | 6228 | 0.952 (0.944–0.959) | 94.5% (93.0–95.7) | 79.5% (78.3–80.5) | 0.545 | 0.166 | no |
+| IDRiD all 516 (external, India, Kowa) | 516 | 0.976 (0.965–0.985) | 93.2% (89.9–95.5) | 87.1% (81.6–91.1) | 0.870 | 0.043 | point estimate only |
+| Messidor-2 (external, France, Topcon) | 1744 | 0.982 (0.976–0.987) | 95.2% (92.8–96.8) | 89.6% (87.8–91.1) | 0.819 | 0.087 | yes |
 
 ### Messidor-2 at exam level, IDx-DR definition (moderate NPDR or worse and/or macular oedema)
 
@@ -23,24 +23,24 @@ Operating point λ_op = 0.3590 (chosen on valB for ≥95% sensitivity). Triage: 
 
 | Configuration | Sensitivity | Specificity |
 |---|---|---|
-| CNN only | 93.7% (90.1–96.0) | 80.1% (76.8–83.1) |
-| CNN + DME rule (exudate within 1 DD of fovea) | 94.1% (90.6–96.3) | 73.2% (69.5–76.6) |
+| CNN only | 96.3% (93.3–98.0) | 87.4% (84.5–89.8) |
+| CNN + DME rule (exudate within 1 DD of fovea) | 96.7% (93.8–98.2) | 80.0% (76.6–83.0) |
 
 ## 2. Uncertainty: prediction sets and triage
 
 | Test set | Set coverage | Mean set size | Recall | Review | Refer | Referable auto-recalled |
 |---|---|---|---|---|---|---|
-| valB (calibration, for reference) | 97.2% (96.2–97.9) | 2.12 | 51.6% | 11.8% | 36.6% | 18/660 (2.7% (1.7–4.3)) |
-| DDR test (internal) | 97.0% (96.3–97.6) | 2.09 | 51.8% | 11.3% | 36.9% | 41/1119 (3.7% (2.7–4.9)) |
-| APTOS test (internal) | 98.5% (97.1–99.2) | 2.27 | 53.6% | 16.5% | 30.0% | 2/213 (0.9% (0.3–3.4)) |
-| ODIR (held-out, China, mixed cameras) | 90.4% (89.7–91.1) | 2.45 | 55.9% | 26.8% | 17.3% | 47/1110 (4.2% (3.2–5.6)) |
-| IDRiD all 516 (external, India, Kowa) | 97.7% (96.0–98.7) | 2.80 | 29.6% | 29.1% | 41.3% | 13/323 (4.0% (2.4–6.8)) |
-| Messidor-2 (external, France, Topcon) | 89.6% (88.1–91.0) | 2.22 | 60.5% | 18.3% | 21.2% | 26/457 (5.7% (3.9–8.2)) |
+| valB (calibration, for reference) | 95.3% (94.1–96.2) | 2.00 | 50.8% | 14.9% | 34.2% | 18/660 (2.7% (1.7–4.3)) |
+| DDR test (internal) | 95.6% (94.7–96.3) | 1.98 | 50.1% | 15.1% | 34.9% | 27/1119 (2.4% (1.7–3.5)) |
+| APTOS test (internal) | 96.4% (94.5–97.7) | 2.20 | 53.2% | 17.8% | 29.0% | 2/213 (0.9% (0.3–3.4)) |
+| ODIR (held-out, China, mixed cameras) | 88.6% (87.8–89.4) | 2.33 | 56.1% | 27.9% | 16.0% | 37/1110 (3.3% (2.4–4.6)) |
+| IDRiD all 516 (external, India, Kowa) | 96.3% (94.3–97.6) | 2.60 | 30.2% | 27.3% | 42.4% | 10/323 (3.1% (1.7–5.6)) |
+| Messidor-2 (external, France, Topcon) | 92.6% (91.3–93.7) | 2.12 | 57.6% | 22.4% | 20.0% | 5/457 (1.1% (0.5–2.5)) |
 
 Per-grade coverage (external sets), showing where the guarantee is weakest:
 
-- IDRiD all 516 (external, India, Kowa): grade 0: 99% (n=168), grade 1: 100% (n=25), grade 2: 98% (n=168), grade 3: 98% (n=93), grade 4: 94% (n=62)
-- Messidor-2 (external, France, Topcon): grade 0: 85% (n=1017), grade 1: 99% (n=270), grade 2: 97% (n=347), grade 3: 95% (n=75), grade 4: 63% (n=35)
+- IDRiD all 516 (external, India, Kowa): grade 0: 98% (n=168), grade 1: 100% (n=25), grade 2: 95% (n=168), grade 3: 99% (n=93), grade 4: 92% (n=62)
+- Messidor-2 (external, France, Topcon): grade 0: 89% (n=1017), grade 1: 99% (n=270), grade 2: 97% (n=347), grade 3: 97% (n=75), grade 4: 89% (n=35)
 
 ### Camera shift: re-calibrating λ_low from audit labels on the new camera
 
@@ -48,20 +48,20 @@ Target: at most 3% of referable eyes auto-recalled. Averages over 300 random aud
 
 | Deployment | Audit labels | Referable auto-recalled (mean / 90th pct) | Share auto-recalled | Operating point sensitivity (mean / 10th pct) | Specificity (mean / 10th pct) |
 |---|---|---|---|---|---|
-| IDRiD all 516 (external, India, Kowa) | none (frozen valB thresholds) | 4.0% / 4.0% | 29.6% | 92.9% / 92.9% | 79.8% / 79.8% |
-| IDRiD all 516 (external, India, Kowa) | 50 | 0.9% / 3.5% | 8.6% | 96.8% / 92.5% | 59.4% / 19.3% |
-| IDRiD all 516 (external, India, Kowa) | 100 | 1.8% / 4.5% | 20.8% | 95.4% / 91.2% | 70.3% / 56.4% |
-| IDRiD all 516 (external, India, Kowa) | 200 | 2.4% / 5.0% | 24.2% | 95.3% / 91.5% | 71.7% / 63.8% |
-| IDRiD all 516 (external, India, Kowa) | 300 | 2.8% / 5.3% | 25.0% | 95.1% / 91.7% | 72.5% / 66.7% |
+| IDRiD all 516 (external, India, Kowa) | none (frozen valB thresholds) | 3.1% / 3.1% | 30.2% | 93.2% / 93.2% | 87.1% / 87.1% |
+| IDRiD all 516 (external, India, Kowa) | 50 | 1.0% / 3.5% | 9.8% | 96.9% / 92.8% | 68.2% / 34.9% |
+| IDRiD all 516 (external, India, Kowa) | 100 | 1.8% / 4.6% | 24.2% | 95.4% / 91.9% | 78.7% / 69.4% |
+| IDRiD all 516 (external, India, Kowa) | 200 | 2.5% / 5.0% | 28.2% | 95.3% / 92.0% | 79.5% / 72.5% |
+| IDRiD all 516 (external, India, Kowa) | 300 | 2.8% / 5.2% | 28.8% | 95.1% / 92.0% | 80.0% / 75.0% |
 
-With 200 audit labels and both thresholds re-fitted: healthy eyes referred directly 1.3%, referable eyes auto-recalled 2.3%, healthy eyes sent to tele-review 38.0%.
-| Messidor-2 (external, France, Topcon) | none (frozen valB thresholds) | 5.7% / 5.7% | 60.5% | 91.7% / 91.7% | 86.0% / 86.0% |
-| Messidor-2 (external, France, Topcon) | 50 | 0.0% / 0.0% | 0.0% | 91.8% / 91.4% | 85.8% / 85.8% |
-| Messidor-2 (external, France, Topcon) | 100 | 0.2% / 0.0% | 3.8% | 96.1% / 91.5% | 70.0% / 52.9% |
-| Messidor-2 (external, France, Topcon) | 200 | 2.1% / 4.8% | 46.2% | 95.8% / 92.0% | 73.3% / 64.2% |
-| Messidor-2 (external, France, Topcon) | 300 | 2.5% / 5.2% | 50.3% | 95.6% / 92.0% | 74.6% / 66.0% |
+With 200 audit labels and both thresholds re-fitted: healthy eyes referred directly 1.4%, referable eyes auto-recalled 2.3%, healthy eyes sent to tele-review 27.1%.
+| Messidor-2 (external, France, Topcon) | none (frozen valB thresholds) | 1.1% / 1.1% | 57.6% | 95.2% / 95.2% | 89.6% / 89.6% |
+| Messidor-2 (external, France, Topcon) | 50 | 0.0% / 0.0% | 0.0% | 95.2% / 95.0% | 89.6% / 89.4% |
+| Messidor-2 (external, France, Topcon) | 100 | 0.2% / 0.0% | 4.6% | 96.4% / 92.0% | 81.8% / 65.4% |
+| Messidor-2 (external, France, Topcon) | 200 | 2.2% / 5.4% | 57.7% | 95.7% / 91.3% | 86.3% / 79.3% |
+| Messidor-2 (external, France, Topcon) | 300 | 2.5% / 5.2% | 61.1% | 95.7% / 92.6% | 87.6% / 82.3% |
 
-With 200 audit labels and both thresholds re-fitted: healthy eyes referred directly 1.6%, referable eyes auto-recalled 2.1%, healthy eyes sent to tele-review 35.6%.
+With 200 audit labels and both thresholds re-fitted: healthy eyes referred directly 1.6%, referable eyes auto-recalled 2.0%, healthy eyes sent to tele-review 21.4%.
 ## 4. Lesion segmentation (pixel AUPR inside the field of view)
 
 | Test set | MA | HE | EX | SE | Mean of 4 | OD | Published mean AUPR, same test set [1] |
