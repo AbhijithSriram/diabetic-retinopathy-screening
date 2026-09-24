@@ -107,8 +107,10 @@ to the grader and the reviewer; see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
 Tested on Linux with an RTX 5000 Ada (32 GB); the first builds ran on Windows
 with an 8 GB RTX 4060. Datasets and trained weights are not in this
-repository (see [docs/DATASETS.md](docs/DATASETS.md)); the exported MATLAB
-models are published as a release asset.
+repository (see [docs/DATASETS.md](docs/DATASETS.md)). The exported MATLAB
+models and the sample photographs are published as a release asset:
+[v1.0-ens_e3](../../releases/tag/v1.0-ens_e3) (`drishtitrust_matlab_models_ens_e3.zip`,
+with placement instructions inside).
 
 ```bash
 python -m venv --system-site-packages .venv    # needs PyTorch with CUDA already installed
