@@ -137,10 +137,10 @@ def main():
         train_df = train_df.sample(min(args.limit, len(train_df)), random_state=SEED)
         val_df = val_df.sample(min(args.limit // 4, len(val_df)), random_state=SEED)
     col = f"cache{args.size}"
-    if args.size != 512 and not (col in df and (df[col].astype(str) != "").all()):
+    if args.size > 512 and not (col in df and (df[col].astype(str) != "").all()):
         sys.exit(f"no {col} column in the manifest: run scripts/cache_size.py --size {args.size} first "
                  f"(training at {args.size} from 512-px crops would just upsample)")
-    print(f"train {len(train_df)}  valA {len(val_df)}  crops from {col if args.size != 512 else 'cache'}")
+    print(f"train {len(train_df)}  valA {len(val_df)}  crops from {col if args.size > 512 else 'cache'}")
     print(train_df.groupby(["source", "grade"]).size().unstack(fill_value=0).to_string())
 
     device = "cuda"
