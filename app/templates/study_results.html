@@ -1,15 +1,112 @@
 {% extends "base.html" %}{% set active = 'study' %}
-{% block title %}Reader study results · DrishtiTrust{% endblock %}
+{% block title %}Reader Study Statistical Results · DrishtiTrust{% endblock %}
 {% block body %}
-<h1>Reader study results · {{ s.reader }}</h1>
-<div class="kpis">
-  <div class="kpi"><div class="v">{{ out.n }}</div><div class="l">cases reviewed</div></div>
-  <div class="kpi"><div class="v">{{ out.median_s or '—' }} s</div><div class="l">median time per case (p90 {{ out.p90_s or '—' }} s)</div></div>
-  <div class="kpi"><div class="v">{{ out.under_30s_pct or '—' }}%</div><div class="l">decided in under 30 s</div></div>
-  <div class="kpi"><div class="v">{{ out.qwk_vs_reference or '—' }}</div><div class="l">grade agreement with reference (QWK)</div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+  <div>
+    <h1>Reader Study Statistical Results: {{ s.reader }}</h1>
+    <p class="muted" style="margin:0;">Empirical human-in-the-loop timing and diagnostic consensus validation for SIH26038.</p>
+  </div>
+  <div>
+    <a href="/study" class="btn">← Back to Study Sessions</a>
+  </div>
 </div>
-{% if out.referable_sens %}<p class="panel">Referable DR vs reference: sensitivity {{ '%.1f' % (100*out.referable_sens[0]) }}% ({{ '%.1f' % (100*out.referable_sens[1]) }}–{{ '%.1f' % (100*out.referable_sens[2]) }}), specificity {{ '%.1f' % (100*out.referable_spec[0]) }}% ({{ '%.1f' % (100*out.referable_spec[1]) }}–{{ '%.1f' % (100*out.referable_spec[2]) }}).</p>{% endif %}
-<div class="panel"><table class="small"><tr><th>Image</th><th>Reference</th><th>Reader</th><th>Seconds</th><th>AI referable prob.</th></tr>
-{% for r in rows %}<tr><td>{{ r.image_id }}</td><td>{{ r.ref_grade }}</td><td>{{ 'ungradable' if r.ungradable else r.grade }}</td><td>{{ '%.1f' % (r.ms / 1000) }}</td><td>{{ '%.2f' % r.ai_p_ref if r.ai_p_ref is not none else '—' }}</td></tr>{% endfor %}
-</table></div>
+
+<!-- Primary Study KPIs -->
+<div class="kpis">
+  <div class="kpi">
+    <div class="v" style="color:var(--dt-ink-heading);">{{ out.n }}</div>
+    <div class="l">Cases Evaluated</div>
+  </div>
+  <div class="kpi">
+    <div class="v" style="color:{{ 'var(--dt-recall-ink)' if out.median_s and out.median_s <= 30.0 else 'var(--dt-crimson-primary)' }};">
+      {{ out.median_s or '—' }} s
+    </div>
+    <div class="l">Median Duration / Case (p90: {{ out.p90_s or '—' }} s)</div>
+  </div>
+  <div class="kpi">
+    <div class="v" style="color:var(--dt-orange-vibrant);">
+      {{ out.under_30s_pct or '—' }}%
+    </div>
+    <div class="l">Completed in &lt; 30 Seconds</div>
+  </div>
+  <div class="kpi">
+    <div class="v" style="color:var(--dt-orange-primary);">
+      {{ out.qwk_vs_reference or '—' }}
+    </div>
+    <div class="l">Agreement with Reference (QWK)</div>
+  </div>
+</div>
+
+<!-- Referable DR Diagnostic Accuracy Callout -->
+{% if out.referable_sens %}
+<div class="panel" style="background:var(--dt-surface-raised);">
+  <h2>Diagnostic Accuracy vs Reference Adjudication</h2>
+  <div class="row" style="margin-top:10px;margin-bottom:0;">
+    <div>
+      <span class="small muted">Sensitivity for Referable DR:</span>
+      <div style="font-size:22px;font-weight:700;font-family:var(--dt-font-mono);color:var(--dt-crimson-primary);margin-top:2px;">
+        {{ '%.1f%%' % (100 * out.referable_sens[0]) }}
+      </div>
+      <span class="small muted">95% CI: ({{ '%.1f%%' % (100 * out.referable_sens[1]) }} – {{ '%.1f%%' % (100 * out.referable_sens[2]) }})</span>
+    </div>
+    <div>
+      <span class="small muted">Specificity for Referable DR:</span>
+      <div style="font-size:22px;font-weight:700;font-family:var(--dt-font-mono);color:var(--dt-recall-ink);margin-top:2px;">
+        {{ '%.1f%%' % (100 * out.referable_spec[0]) }}
+      </div>
+      <span class="small muted">95% CI: ({{ '%.1f%%' % (100 * out.referable_spec[1]) }} – {{ '%.1f%%' % (100 * out.referable_spec[2]) }})</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Individual Case Decision Audit Log -->
+<div class="panel" style="margin-top:16px;">
+  <h2>Individual Case Timing & Decision Breakdown</h2>
+  <div style="overflow-x:auto;">
+    <table class="small">
+      <thead>
+        <tr>
+          <th>Case Image ID</th>
+          <th>Reference Consensus Grade</th>
+          <th>Reader Decision</th>
+          <th>Duration</th>
+          <th>AI Referable Prob.</th>
+          <th>Agreement</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {% set reader_grade = 'ungradable' if r.ungradable else r.grade %}
+        {% set agreed = (r.ref_grade == r.grade) and not r.ungradable %}
+        <tr>
+          <td><b style="font-family:var(--dt-font-mono);">{{ r.image_id }}</b></td>
+          <td>Grade {{ r.ref_grade }}</td>
+          <td>
+            <b>{{ 'Ungradable' if r.ungradable else ('Grade ' ~ r.grade) }}</b>
+            {% if r.dme %}<span class="small" style="color:var(--dt-crimson-primary);"> (+DME)</span>{% endif %}
+          </td>
+          <td>
+            <span style="font-family:var(--dt-font-mono);font-weight:700;color:{{ 'var(--dt-crimson-primary)' if (r.ms / 1000) > 30.0 else 'var(--dt-ink-heading)' }};">
+              {{ '%.1f s' % (r.ms / 1000) }}
+            </span>
+          </td>
+          <td style="font-family:var(--dt-font-mono);">
+            {{ '%.2f' % r.ai_p_ref if r.ai_p_ref is not none else '—' }}
+          </td>
+          <td>
+            {% if agreed %}
+            <span class="pill recall" style="font-size:11px;">Exact Match</span>
+            {% elif (r.ref_grade >= 2 and r.grade >= 2) or (r.ref_grade < 2 and r.grade < 2 and not r.ungradable) %}
+            <span class="pill review" style="font-size:11px;">Triage Match</span>
+            {% else %}
+            <span class="pill urgent" style="font-size:11px;">Discrepancy</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

@@ -1,9 +1,104 @@
-<!doctype html><html lang="{{ lang }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Eye check status</title><link rel="stylesheet" href="/static/style.css"></head>
-<body><main style="max-width:640px">
-<p class="small"><a href="?lang=en">English</a> · <a href="?lang=hi">हिन्दी</a> · <a href="?lang=ta">தமிழ்</a></p>
-{% set o = c.final or r.outcome %}
-<div class="outcome o-{{ o }}"><p style="margin-top:0">{{ r.message.main }}</p>{% for w in r.message.why %}<p class="small">{{ w }}</p>{% endfor %}</div>
-{% if ref %}<div class="panel"><h2>Your referral</h2><p>Status: <b>{{ ref.state }}</b>{% if ref.appointment %} · appointment {{ ref.appointment }}{% endif %}</p></div>{% endif %}
-<p class="small muted">{{ r.message.disclaimer }}</p>
-</main></body></html>
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eye Health Check Status · DrishtiTrust</title>
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body style="background:var(--dt-canvas);">
+<main style="max-width:680px;margin:24px auto;padding:0 16px;">
+  <!-- Public Brand Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <img src="/static/logo.svg" alt="DrishtiTrust Logo" style="width:36px;height:36px;">
+      <div>
+        <div style="font-weight:700;font-size:17px;color:var(--dt-ink-heading);">DrishtiTrust</div>
+        <div class="small muted">Eye Health Screening Status</div>
+      </div>
+    </div>
+
+    <!-- Language Selector -->
+    <div class="small" style="background:var(--dt-surface);padding:4px 10px;border-radius:var(--dt-radius-sm);border:1px solid var(--dt-border-subtle);display:flex;gap:6px;">
+      <a href="?lang=en" style="font-weight:{{ '700' if lang=='en' else '400' }};">English</a> ·
+      <a href="?lang=hi" style="font-weight:{{ '700' if lang=='hi' else '400' }};">हिन्दी</a> ·
+      <a href="?lang=ta" style="font-weight:{{ '700' if lang=='ta' else '400' }};">தமிழ்</a>
+    </div>
+  </div>
+
+  <!-- Primary Status Callout -->
+  {% set o = c.final or r.outcome %}
+  {% set label = {
+    'recall': 'Routine Re-screen (Eyes Healthy / Low Risk)',
+    'review': 'Under Review by Eye Specialist',
+    'refer': 'Hospital Referral Advised',
+    'recapture': 'Retake Required'
+  }[o] %}
+
+  <div class="outcome o-{{ o }}">
+    <div class="big" style="margin-bottom:8px;">{{ label }}</div>
+    <p style="font-size:16px;line-height:1.55;margin-top:0;">{{ r.message.main }}</p>
+    {% if r.message.why %}
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.08);">
+      {% for w in r.message.why %}
+      <p class="small" style="margin:4px 0;">• {{ w }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Referral & Appointment Card (if referred) -->
+  {% if ref %}
+  <div class="panel">
+    <h2>Hospital Referral Details</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+      <div>
+        <span class="small muted">Referral Progress:</span>
+        <b style="color:var(--dt-ink-heading);text-transform:capitalize;"> {{ ref.state }}</b>
+      </div>
+      <div>
+        {% if ref.appointment %}
+        <span class="pill recall" style="font-size:13px;padding:4px 10px;">
+          📅 Appointment: {{ ref.appointment }}
+        </span>
+        {% else %}
+        <span class="pill review" style="font-size:13px;padding:4px 10px;">
+          Appointment being scheduled
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    <p class="small muted" style="margin:0;">
+      Please bring your eye referral slip and your mobile phone to the district eye hospital. Regular blood sugar control and medical follow-up protect your vision.
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- Patient Session Info Card -->
+  <div class="panel" style="background:var(--dt-surface-raised);">
+    <div class="row" style="margin-bottom:0;">
+      <div>
+        <div class="small muted">Patient Code</div>
+        <b style="font-family:var(--dt-font-mono);">{{ c.patient or 'Anonymized' }}</b>
+      </div>
+      <div>
+        <div class="small muted">Examined Eye</div>
+        <b>{{ c.eye|capitalize }} Eye</b>
+      </div>
+      <div>
+        <div class="small muted">Screened At</div>
+        <b>{{ c.site }}</b>
+      </div>
+    </div>
+  </div>
+
+  <p class="small muted" style="text-align:center;margin-top:16px;">
+    {{ r.message.disclaimer }}
+  </p>
+</main>
+</body>
+</html>

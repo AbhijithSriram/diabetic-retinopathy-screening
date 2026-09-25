@@ -99,14 +99,61 @@ def add_review(case_id, reviewer, grade, dme, ungradable, ms):
     return final
 
 
-def create_referral(case_id, urgent=False):
+def create_referral(case_id, urgent=False) -> int:
     with conn() as c:
-        if c.execute("SELECT 1 FROM referrals WHERE case_id=?", (case_id,)).fetchone():
-            return
-        tok = get_case(case_id)["token"]
+        row = c.execute("SELECT id FROM referrals WHERE case_id=?", (case_id,)).fetchone()
+        if row:
+            return row["id"]
+        case = get_case(case_id)
+        tok = case["token"] if case else new_token()
         hist = [{"state": "flagged", "t": time.time()}]
-        c.execute("INSERT INTO referrals(case_id, token, state, created, updated, urgent, contact_tier, history_json) VALUES(?,?,?,?,?,?,?,?)",
+        cur = c.execute("INSERT INTO referrals(case_id, token, state, created, updated, urgent, contact_tier, history_json) VALUES(?,?,?,?,?,?,?,?)",
                   (case_id, tok, "flagged", time.time(), time.time(), int(urgent), "patient", json.dumps(hist)))
+        return cur.lastrowid
+
+
+def book_referral_direct(case_id: int, facility: str, specialty: str, appointment_date: str, transit: bool = False, escort: bool = False, notes: str = ""):
+    with conn() as c:
+        ref = c.execute("SELECT * FROM referrals WHERE case_id=?", (case_id,)).fetchone()
+        if ref is None:
+            case = get_case(case_id)
+            urgent = bool(case["urgent"]) if case else False
+            ref_id = create_referral(case_id, urgent=urgent)
+            ref = c.execute("SELECT * FROM referrals WHERE id=?", (ref_id,)).fetchone()
+        else:
+            ref_id = ref["id"]
+
+        hist = json.loads(ref["history_json"])
+        booking_entry = {
+            "state": "booked",
+            "t": time.time(),
+            "facility": facility,
+            "specialty": specialty,
+            "appointment": appointment_date,
+            "transit": transit,
+            "escort": escort,
+            "notes": notes
+        }
+        hist.append(booking_entry)
+
+        c.execute("UPDATE referrals SET state='booked', updated=?, history_json=?, appointment=? WHERE id=?",
+                  (time.time(), json.dumps(hist), appointment_date, ref_id))
+
+        sms_text = (f"DrishtiTrust Referral Booked: Appointment confirmed at {facility} ({specialty}) on {appointment_date}. "
+                    f"Transit: {'Reserved (Bus Route 4B)' if transit else 'Self'}. Slip token: {ref['token']}. Bring your printed slip.")
+        c.execute("INSERT INTO outbox(created, referral_id, channel, recipient, text) VALUES(?,?,?,?,?)",
+                  (time.time(), ref_id, "SMS", "patient", sms_text))
+
+        return {
+            "referral_id": ref_id,
+            "token": ref["token"],
+            "state": "booked",
+            "facility": facility,
+            "specialty": specialty,
+            "appointment": appointment_date,
+            "transit": transit,
+            "sms_sent": True
+        }
 
 
 def advance_referral(ref_id: int, to_state: str, note: str = "", appointment: str | None = None):

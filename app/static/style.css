@@ -1,72 +1,1335 @@
+/* ==========================================================================
+   DrishtiTrust Design System: Warm Retinal Light Theme (Zero Pure White)
+   Inspired by retinal imaging: Saffron Orange & Crimson Red primary palette.
+   ========================================================================== */
+
 :root {
-  --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2330; --muted: #5d6778; --line: #dfe3ea;
-  --accent: #1f5fbf; --recall: #1e7a4a; --review: #a86400; --refer: #b3261e; --recapture: #2a5db0;
-  --recall-bg: #e7f4ec; --review-bg: #fdf1dc; --refer-bg: #fbe7e5; --recapture-bg: #e6eefb;
-  --radius: 10px;
+  /* Canvas & Structural Backgrounds (Strictly Non-White) */
+  --dt-canvas: #FAF6F0;           /* Page background: warm parchment */
+  --dt-surface: #F5EFEB;          /* Surface / Card container */
+  --dt-surface-raised: #EFE7DE;   /* Elevated panels, dropdowns, modals */
+  --dt-surface-sunken: #EADFD3;   /* Sunken wells, input fields */
+
+  /* Borders & Dividers */
+  --dt-border-subtle: #E8DCCF;    /* Subtle card borders */
+  --dt-border-strong: #D5C2AF;    /* Strong borders, tables, inputs */
+  --dt-border-focus: #C2410C;     /* Focus rings & active outlines */
+
+  /* Typography / Text Colors */
+  --dt-ink-heading: #231B1A;      /* H1-H3: deep espresso */
+  --dt-ink-body: #342725;         /* Body text: readable dark charcoal */
+  --dt-ink-muted: #6E5D57;        /* Secondary labels, metadata */
+  --dt-ink-faint: #96837C;        /* Placeholders, disabled text */
+
+  /* Primary Brand & Action Colors (Red & Orange) */
+  --dt-crimson-dark: #7F1D1D;
+  --dt-crimson-primary: #9E1B1B;
+  --dt-crimson-light: #B91C1C;
+  --dt-crimson-subtle: #FBEAE8;
+
+  --dt-orange-primary: #C2410C;
+  --dt-orange-vibrant: #EA580C;
+  --dt-orange-warm: #F97316;
+  --dt-orange-subtle: #FDF1E8;
+
+  /* Clinical Outcome Triage Colors */
+  --dt-recall-ink: #22543D;
+  --dt-recall-bg: #EAF4EE;
+  --dt-recall-border: #BCDBC6;
+
+  --dt-review-ink: #9A3412;
+  --dt-review-bg: #FDF2E2;
+  --dt-review-border: #F6CE9A;
+
+  --dt-refer-ink: #881337;
+  --dt-refer-bg: #FCE8E6;
+  --dt-refer-border: #F7B5B0;
+
+  --dt-recapture-ink: #7C2D12;
+  --dt-recapture-bg: #FBECE5;
+  --dt-recapture-border: #F3C5B1;
+
+  /* Lesion Visualization Colors */
+  --dt-lesion-ma: #DC2626;        /* Microaneurysms */
+  --dt-lesion-he: #881337;        /* Haemorrhages */
+  --dt-lesion-ex: #D97706;        /* Hard Exudates */
+  --dt-lesion-se: #F59E0B;        /* Soft Exudates */
+  --dt-landmark-od: #059669;      /* Optic Disc */
+  --dt-landmark-fovea: #0284C7;   /* Fovea & 1-DD zone */
+
+  /* Design Tokens: Radii & Shadows */
+  --dt-radius-sm: 6px;
+  --dt-radius-md: 10px;
+  --dt-radius-lg: 16px;
+  --dt-shadow-sm: 0 1px 3px rgba(35, 27, 26, 0.05);
+  --dt-shadow-md: 0 4px 12px rgba(35, 27, 26, 0.08);
+  --dt-shadow-lg: 0 10px 24px rgba(35, 27, 26, 0.12);
+
+  /* Fonts: Medical-Grade Non-Congested Architecture */
+  --dt-font-display: 'Sora', 'Plus Jakarta Sans', sans-serif;
+  --dt-font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  --dt-font-mono: 'JetBrains Mono', monospace;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #12151b; --panel: #1b2029; --ink: #e7eaf0; --muted: #9aa4b5; --line: #2c3340;
-    --accent: #6aa0ff; --recall: #5fd08f; --review: #f0b04a; --refer: #ff8a80; --recapture: #8fb4ff;
-    --recall-bg: #173024; --review-bg: #33280f; --refer-bg: #3a1a18; --recapture-bg: #172440;
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--dt-canvas);
+  color: var(--dt-ink-body);
+  font-family: var(--dt-font-sans);
+  font-size: 15px;
+  line-height: 1.65;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--dt-font-display);
+  letter-spacing: -0.022em;
+  line-height: 1.25;
+}
+
+a {
+  color: var(--dt-orange-primary);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+a:hover {
+  color: var(--dt-crimson-light);
+  text-decoration: underline;
+}
+
+/* Header & Navigation Shell */
+header.top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 24px;
+  background: var(--dt-surface);
+  border-bottom: 1px solid var(--dt-border-subtle);
+  flex-wrap: wrap;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brand-wrap img.logo-full {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+
+.brand-wrap:hover {
+  text-decoration: none;
+}
+
+nav.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+}
+
+nav.nav-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--dt-radius-sm);
+  color: var(--dt-ink-muted);
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+
+nav.nav-links a:hover {
+  background: var(--dt-surface-raised);
+  color: var(--dt-ink-heading);
+}
+
+nav.nav-links a.on {
+  background: var(--dt-orange-subtle);
+  color: var(--dt-orange-primary);
+  font-weight: 600;
+}
+
+.header-status-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.net-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--dt-recall-bg);
+  color: var(--dt-recall-ink);
+  border: 1px solid var(--dt-recall-border);
+}
+
+.net-pill::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dt-recall-ink);
+}
+
+.net-pill.offline {
+  background: var(--dt-refer-bg);
+  color: var(--dt-refer-ink);
+  border-color: var(--dt-refer-border);
+}
+
+.net-pill.offline::before {
+  background: var(--dt-refer-ink);
+}
+
+.proto {
+  font-size: 12px;
+  color: var(--dt-ink-muted);
+  background: var(--dt-surface-raised);
+  padding: 3px 8px;
+  border-radius: var(--dt-radius-sm);
+  border: 1px solid var(--dt-border-subtle);
+}
+
+/* Layout */
+main {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+/* Panels & Cards */
+.panel {
+  background: var(--dt-surface);
+  border: 1px solid var(--dt-border-subtle);
+  border-radius: var(--dt-radius-md);
+  padding: 20px 22px;
+  margin-bottom: 18px;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+.panel-raised {
+  background: var(--dt-surface-raised);
+  border: 1px solid var(--dt-border-strong);
+}
+
+/* Typography Hierarchy */
+h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--dt-ink-heading);
+  margin: 0 0 16px;
+  letter-spacing: -0.3px;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--dt-ink-heading);
+  margin: 0 0 12px;
+}
+
+h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dt-orange-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin: 14px 0 8px;
+}
+
+p {
+  margin: 0 0 12px;
+}
+
+.muted {
+  color: var(--dt-ink-muted);
+}
+
+.small {
+  font-size: 12.5px;
+}
+
+/* Form Elements */
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dt-ink-heading);
+  margin: 10px 0 4px;
+}
+
+input[type="text"],
+input[type="date"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--dt-border-strong);
+  border-radius: var(--dt-radius-sm);
+  background: var(--dt-surface-sunken);
+  color: var(--dt-ink-body);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: all 150ms ease;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+select:focus {
+  border-color: var(--dt-border-focus);
+  background: var(--dt-canvas);
+  box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.15);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+/* Button Component System */
+button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--dt-radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--dt-border-strong);
+  background: var(--dt-surface);
+  color: var(--dt-ink-body);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 120ms ease;
+}
+
+button:hover, .btn:hover {
+  background: var(--dt-surface-raised);
+  text-decoration: none;
+}
+
+button.primary, .btn.primary {
+  background: var(--dt-orange-vibrant);
+  border-color: var(--dt-orange-vibrant);
+  color: #FAF6F0;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+}
+
+button.primary:hover, .btn.primary:hover {
+  background: var(--dt-orange-warm);
+  border-color: var(--dt-orange-warm);
+}
+
+button.primary:active, .btn.primary:active {
+  background: var(--dt-orange-primary);
+  border-color: var(--dt-orange-primary);
+  transform: translateY(1px);
+}
+
+button.danger, .btn.danger {
+  background: var(--dt-crimson-primary);
+  border-color: var(--dt-crimson-primary);
+  color: #FAF6F0;
+}
+
+button.danger:hover, .btn.danger:hover {
+  background: var(--dt-crimson-light);
+}
+
+button:disabled, .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Clinical Outcome Banners */
+.outcome {
+  border-radius: var(--dt-radius-md);
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  border: 1px solid transparent;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+.outcome .big {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.o-recall {
+  background: var(--dt-recall-bg);
+  border-color: var(--dt-recall-border);
+  color: var(--dt-recall-ink);
+}
+
+.o-review {
+  background: var(--dt-review-bg);
+  border-color: var(--dt-review-border);
+  color: var(--dt-review-ink);
+}
+
+.o-refer {
+  background: var(--dt-refer-bg);
+  border-color: var(--dt-refer-border);
+  color: var(--dt-refer-ink);
+}
+
+.o-recapture {
+  background: var(--dt-recapture-bg);
+  border-color: var(--dt-recapture-border);
+  color: var(--dt-recapture-ink);
+}
+
+.outcome p {
+  color: var(--dt-ink-body);
+  margin: 10px 0 0;
+  font-size: 15.5px;
+}
+
+/* Status Pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.pill.recall {
+  background: var(--dt-recall-bg);
+  color: var(--dt-recall-ink);
+  border-color: var(--dt-recall-border);
+}
+
+.pill.review {
+  background: var(--dt-review-bg);
+  color: var(--dt-review-ink);
+  border-color: var(--dt-review-border);
+}
+
+.pill.refer, .pill.urgent {
+  background: var(--dt-refer-bg);
+  color: var(--dt-refer-ink);
+  border-color: var(--dt-refer-border);
+}
+
+.pill.recapture {
+  background: var(--dt-recapture-bg);
+  color: var(--dt-recapture-ink);
+  border-color: var(--dt-recapture-border);
+}
+
+/* Quality Recapture Guidance Card */
+.quality-card {
+  background: var(--dt-recapture-bg);
+  border: 1.5px solid var(--dt-recapture-border);
+  border-radius: var(--dt-radius-md);
+  padding: 18px 20px;
+  margin: 14px 0;
+  color: var(--dt-recapture-ink);
+}
+
+.quality-card .badge {
+  display: inline-block;
+  background: var(--dt-orange-primary);
+  color: #FAF6F0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.quality-card .instruction {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dt-ink-heading);
+  margin-bottom: 12px;
+}
+
+.quality-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.quality-metric-item {
+  background: rgba(250, 246, 240, 0.7);
+  padding: 8px 12px;
+  border-radius: var(--dt-radius-sm);
+  border: 1px solid var(--dt-recapture-border);
+  font-size: 12px;
+}
+
+.quality-metric-item b {
+  display: block;
+  font-size: 13px;
+  color: var(--dt-ink-heading);
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--dt-border-subtle);
+  vertical-align: top;
+}
+
+th {
+  font-size: 12px;
+  color: var(--dt-ink-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--dt-surface-raised);
+}
+
+tr:hover td {
+  background: rgba(239, 231, 222, 0.4);
+}
+
+/* Dropzone & Preview */
+.dropzone-box {
+  border: 2px dashed var(--dt-border-strong);
+  border-radius: var(--dt-radius-md);
+  padding: 24px;
+  text-align: center;
+  background: var(--dt-surface-sunken);
+  cursor: pointer;
+  transition: all 150ms ease;
+  margin: 10px 0;
+}
+
+.dropzone-box:hover, .dropzone-box.dragover {
+  border-color: var(--dt-orange-primary);
+  background: var(--dt-orange-subtle);
+}
+
+.preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.preview-img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--dt-radius-sm);
+  border: 2px solid var(--dt-border-strong);
+  background: #000;
+}
+
+/* Image Viewer & Tabs */
+.grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 880px) {
+  .grid2 {
+    grid-template-columns: 1fr;
   }
 }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif; }
-a { color: var(--accent); }
-header.top { display: flex; align-items: center; gap: 18px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-header.top .brand { font-weight: 700; letter-spacing: .2px; }
-header.top nav a { margin-right: 14px; text-decoration: none; color: var(--muted); }
-header.top nav a.on { color: var(--ink); font-weight: 600; }
-.proto { font-size: 12px; color: var(--muted); margin-left: auto; }
-main { max-width: 1180px; margin: 0 auto; padding: 18px 16px 60px; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; }
-h1 { font-size: 22px; margin: 4px 0 14px; }
-h2 { font-size: 17px; margin: 0 0 10px; }
-h3 { font-size: 14px; margin: 12px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
-label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 3px; }
-input, select, button { font: inherit; }
-input[type=text], input[type=date], select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
-.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-button, .btn { display: inline-block; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; text-decoration: none; }
-button.primary, .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button:disabled { opacity: .5; cursor: default; }
-.outcome { border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; border: 1px solid transparent; }
-.outcome .big { font-size: 24px; font-weight: 700; }
-.o-recall { background: var(--recall-bg); color: var(--recall); }
-.o-review { background: var(--review-bg); color: var(--review); }
-.o-refer { background: var(--refer-bg); color: var(--refer); }
-.o-recapture { background: var(--recapture-bg); color: var(--recapture); }
-.outcome p { color: var(--ink); margin: 8px 0 0; font-size: 16px; }
-.muted { color: var(--muted); }
-.small { font-size: 12px; }
-table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
-.pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; }
-.pill.recall { background: var(--recall-bg); color: var(--recall); }
-.pill.review { background: var(--review-bg); color: var(--review); }
-.pill.refer, .pill.urgent { background: var(--refer-bg); color: var(--refer); }
-.pill.recapture { background: var(--recapture-bg); color: var(--recapture); }
-.grid2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 14px; }
-@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
-.imgbox img { width: 100%; border-radius: 8px; display: block; background: #000; }
-.tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-.tabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
-.bar { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; }
-.bar > span { display: block; height: 100%; background: var(--accent); }
-.gradebars td { padding: 3px 6px; border: 0; }
-.gradebars td:first-child { width: 140px; font-size: 13px; }
-.gradebars tr.inset td:first-child { font-weight: 700; }
-.decide { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 8px 0; }
-.decide button { padding: 12px 4px; font-weight: 600; }
-.decide button small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
-.timer { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 700; }
-.timer.over { color: var(--refer); }
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
-.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
-.kpi .v { font-size: 24px; font-weight: 700; }
-.kpi .l { font-size: 12px; color: var(--muted); }
-ul.trace { margin: 4px 0; padding-left: 18px; }
-.notice { background: var(--review-bg); color: var(--ink); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
-@media print { header.top, .noprint { display: none !important; } body { background: #fff; } .panel { border: 1px solid #999; } }
+
+.imgbox {
+  background: #0D0908;
+  border-radius: var(--dt-radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--dt-border-strong);
+}
+
+.imgbox img {
+  width: 100%;
+  display: block;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: var(--dt-radius-sm);
+}
+
+.tabs button.on {
+  background: var(--dt-orange-primary);
+  border-color: var(--dt-orange-primary);
+  color: #FAF6F0;
+}
+
+/* KPI Cards */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.kpi {
+  background: var(--dt-surface);
+  border: 1px solid var(--dt-border-subtle);
+  border-radius: var(--dt-radius-md);
+  padding: 16px 18px;
+  box-shadow: var(--dt-shadow-sm);
+}
+
+.kpi .v {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--dt-orange-primary);
+  font-family: var(--dt-font-mono);
+}
+
+.kpi .l {
+  font-size: 12.5px;
+  color: var(--dt-ink-muted);
+  margin-top: 4px;
+}
+
+/* Probability Bars */
+.bar {
+  height: 12px;
+  background: var(--dt-surface-sunken);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  background: var(--dt-orange-vibrant);
+}
+
+.gradebars td {
+  padding: 4px 6px;
+  border: 0;
+}
+
+.gradebars td:first-child {
+  width: 150px;
+  font-size: 13px;
+}
+
+.gradebars tr.inset td:first-child {
+  font-weight: 700;
+  color: var(--dt-crimson-primary);
+}
+
+/* Decision Pad */
+.decide {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.decide button {
+  padding: 12px 6px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.decide button small {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--dt-ink-muted);
+}
+
+/* Timer HUD */
+.timer {
+  font-family: var(--dt-font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dt-ink-heading);
+}
+
+.timer.warn {
+  color: var(--dt-orange-warm);
+}
+
+.timer.over {
+  color: var(--dt-crimson-primary);
+}
+
+/* Notices & Alerts */
+.notice {
+  background: var(--dt-review-bg);
+  border: 1px solid var(--dt-review-border);
+  color: var(--dt-ink-body);
+  border-radius: var(--dt-radius-sm);
+  padding: 12px 14px;
+  font-size: 13.5px;
+  margin-bottom: 14px;
+}
+
+/* Print Stylesheet */
+@media print {
+  header.top, header.public-nav, .portal-header, .portal-sidebar, .noprint {
+    display: none !important;
+  }
+  body {
+    background: #FAF6F0 !important;
+  }
+  .panel, .card {
+    border: 1px solid #7C6E68 !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ==========================================================================
+   Public Landing Page Styles (Clean, World-Class, Non-Tab Architecture)
+   ========================================================================== */
+.public-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2.5rem;
+  background: var(--dt-surface);
+  border-bottom: 1px solid var(--dt-border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}
+
+.public-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.public-nav-links a {
+  color: var(--dt-ink-body);
+  font-weight: 500;
+  font-size: 0.92rem;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.public-nav-links a:hover {
+  color: var(--dt-crimson-primary);
+  text-decoration: none;
+}
+
+.public-portal-ctas {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Interactive Fundus Before/After Lens Slider */
+.lens-compare-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  height: 480px;
+  margin: 0 auto;
+  border-radius: var(--dt-radius-lg);
+  overflow: hidden;
+  border: 2px solid var(--dt-border-strong);
+  box-shadow: var(--dt-shadow-lg);
+  user-select: none;
+  background: #3B0E09;
+}
+
+.lens-image-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+.lens-image-before {
+  z-index: 1;
+}
+
+.lens-image-after {
+  z-index: 2;
+  width: 50%;
+  overflow: hidden;
+  border-right: 2px solid var(--dt-orange-vibrant);
+}
+
+.lens-image-after-inner {
+  width: 680px;
+  height: 480px;
+  background-size: cover;
+  background-position: center;
+}
+
+.lens-slider-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--dt-surface);
+  border: 2px solid var(--dt-orange-vibrant);
+  box-shadow: 0 4px 14px rgba(35, 27, 26, 0.4);
+  z-index: 10;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dt-crimson-primary);
+}
+
+.lens-badge-label {
+  position: absolute;
+  bottom: 1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--dt-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  z-index: 5;
+}
+
+.lens-badge-raw {
+  right: 1rem;
+  background: rgba(35, 27, 26, 0.75);
+  color: #F5EFEB;
+  border: 1px solid rgba(245, 239, 235, 0.2);
+}
+
+.lens-badge-ai {
+  left: 1rem;
+  background: rgba(158, 27, 27, 0.85);
+  color: #F5EFEB;
+  border: 1px solid var(--dt-orange-vibrant);
+}
+
+/* ==========================================================================
+   Clinical Portal Shell (Field Screener & Doctor Tele-Review)
+   ========================================================================== */
+.portal-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.75rem;
+  background: var(--dt-surface);
+  border-bottom: 1px solid var(--dt-border-strong);
+  box-shadow: var(--dt-shadow-sm);
+}
+
+.portal-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--dt-surface-sunken);
+  border: 1px solid var(--dt-border-strong);
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--dt-radius-sm);
+}
+
+.portal-main-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  flex: 1;
+  min-height: calc(100vh - 65px);
+}
+
+.portal-sidebar {
+  background: var(--dt-surface);
+  border-right: 1px solid var(--dt-border-strong);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.portal-content {
+  padding: 1.75rem 2rem;
+  overflow-y: auto;
+  background: var(--dt-canvas);
+}
+
+/* Screener Touch-Friendly Dropzone */
+.screener-dropzone {
+  border: 2px dashed var(--dt-border-strong);
+  background: var(--dt-surface);
+  border-radius: var(--dt-radius-md);
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.screener-dropzone:hover, .screener-dropzone.dragover {
+  border-color: var(--dt-orange-vibrant);
+  background: var(--dt-surface-raised);
+}
+
+/* Screener Roster Card */
+.roster-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  background: var(--dt-surface-sunken);
+  border: 1px solid var(--dt-border-subtle);
+  border-radius: var(--dt-radius-sm);
+  margin-bottom: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.roster-item:hover {
+  background: var(--dt-surface-raised);
+  border-color: var(--dt-border-strong);
+}
+
+/* ==========================================================================
+   Aceternity UI & Magic UI Animation Primitives (Warm Non-White Light Theme)
+   ========================================================================== */
+
+/* 1. Aceternity Spotlight Card Effect */
+.spotlight-card {
+  position: relative;
+  border-radius: var(--dt-radius-lg);
+  background: var(--dt-surface);
+  border: 1px solid var(--dt-border-strong);
+  overflow: hidden;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    550px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(234, 88, 12, 0.12),
+    transparent 45%
+  );
+  opacity: 0;
+  transition: opacity 300ms ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+.spotlight-card:hover {
+  border-color: var(--dt-orange-vibrant);
+  box-shadow: 0 12px 30px rgba(35, 27, 26, 0.09);
+}
+
+/* 2. Magic UI Infinite Marquee */
+.marquee-container {
+  overflow: hidden;
+  user-select: none;
+  display: flex;
+  gap: 2rem;
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  padding: 1rem 0;
+}
+
+.marquee-content {
+  display: flex;
+  gap: 2rem;
+  flex-shrink: 0;
+  animation: marquee-scroll 32s linear infinite;
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - 2rem)); }
+}
+
+.marquee-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 999px;
+  background: var(--dt-surface);
+  border: 1px solid var(--dt-border-strong);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--dt-ink-heading);
+  white-space: nowrap;
+  box-shadow: var(--dt-shadow-sm);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.marquee-pill:hover {
+  transform: translateY(-2px);
+  border-color: var(--dt-orange-vibrant);
+  box-shadow: var(--dt-shadow-md);
+}
+
+/* 3. Magic UI Shimmer Button & Border Beam */
+.shimmer-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--dt-radius-md);
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.shimmer-button:hover {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 10px 25px -5px rgba(158, 27, 27, 0.3);
+}
+
+.shimmer-button:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.shimmer-button-crimson {
+  background: linear-gradient(135deg, var(--dt-crimson-primary) 0%, #B91C1C 50%, #9E1B1B 100%);
+  color: #F5EFEB;
+  padding: 0.85rem 1.85rem;
+  box-shadow: 0 4px 14px rgba(158, 27, 27, 0.28);
+}
+
+.shimmer-button-orange {
+  background: linear-gradient(135deg, var(--dt-orange-vibrant) 0%, var(--dt-orange-primary) 100%);
+  color: #F5EFEB;
+  padding: 0.85rem 1.85rem;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
+}
+
+.shimmer-button-teal {
+  background: linear-gradient(135deg, #0F766E 0%, #059669 100%);
+  color: #F5EFEB;
+  padding: 0.85rem 1.85rem;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.28);
+}
+
+.shimmer-button-indigo {
+  background: linear-gradient(135deg, #4338CA 0%, #6366F1 100%);
+  color: #F5EFEB;
+  padding: 0.85rem 1.85rem;
+  box-shadow: 0 4px 14px rgba(67, 56, 202, 0.28);
+}
+
+.shimmer-button::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 35%,
+    rgba(250, 246, 240, 0.28) 50%,
+    transparent 65%
+  );
+  transform: rotate(25deg) translateY(-100%);
+  animation: shimmer-sweep 3.5s infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer-sweep {
+  0% { transform: rotate(25deg) translateY(-120%); }
+  40%, 100% { transform: rotate(25deg) translateY(120%); }
+}
+
+/* 4. Aceternity Moving Border Effect */
+.moving-border-box {
+  position: relative;
+  border-radius: var(--dt-radius-md);
+  padding: 1.5px;
+  background: transparent;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.moving-border-box::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    transparent,
+    rgba(158, 27, 27, 0.8) 10%,
+    rgba(234, 88, 12, 0.9) 20%,
+    rgba(15, 118, 110, 0.8) 30%,
+    rgba(67, 56, 202, 0.8) 40%,
+    transparent 50%
+  );
+  animation: moving-border-spin 4s linear infinite;
+  z-index: 0;
+}
+
+.moving-border-inner {
+  position: relative;
+  background: var(--dt-surface);
+  border-radius: calc(var(--dt-radius-md) - 1.5px);
+  z-index: 1;
+}
+
+@keyframes moving-border-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 5. Aceternity Multi-Color Aurora Mesh Background */
+.aurora-mesh-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(85px);
+  opacity: 0.65;
+  animation: aurora-float 14s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.aurora-blob-crimson {
+  top: -10%;
+  left: 15%;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(158, 27, 27, 0.22) 0%, rgba(158, 27, 27, 0) 70%);
+  animation-duration: 12s;
+}
+
+.aurora-blob-saffron {
+  top: 15%;
+  right: 10%;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.20) 0%, rgba(234, 88, 12, 0) 70%);
+  animation-duration: 15s;
+  animation-delay: -3s;
+}
+
+.aurora-blob-teal {
+  bottom: 0%;
+  left: 20%;
+  width: 540px;
+  height: 540px;
+  background: radial-gradient(circle, rgba(15, 118, 110, 0.18) 0%, rgba(15, 118, 110, 0) 70%);
+  animation-duration: 17s;
+  animation-delay: -6s;
+}
+
+.aurora-blob-indigo {
+  top: 25%;
+  left: 45%;
+  width: 440px;
+  height: 440px;
+  background: radial-gradient(circle, rgba(67, 56, 202, 0.16) 0%, rgba(67, 56, 202, 0) 70%);
+  animation-duration: 19s;
+  animation-delay: -9s;
+}
+
+.aurora-blob-amber {
+  bottom: 10%;
+  right: 25%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.18) 0%, rgba(217, 119, 6, 0) 70%);
+  animation-duration: 14s;
+  animation-delay: -4s;
+}
+
+@keyframes aurora-float {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(45px, -30px) scale(1.08);
+  }
+  66% {
+    transform: translate(-35px, 35px) scale(0.94);
+  }
+  100% {
+    transform: translate(25px, -20px) scale(1.04);
+  }
+}
+
+/* Precision Optical Reticle & Coordinate Grid */
+.optical-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(var(--dt-border-strong) 1.2px, transparent 1.2px);
+  background-size: 32px 32px;
+  opacity: 0.35;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 30%, transparent 80%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Dynamic Interactive Retinal Cursor Spotlight */
+.cursor-interactive-spotlight {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 600px;
+  height: 600px;
+  margin-left: -300px;
+  margin-top: -300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.08) 0%, rgba(158, 27, 27, 0.04) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 300ms ease;
+  will-change: transform;
+}
+
+/* Animated Retinal Vascular Pulse Line */
+.retinal-vessel-pulse {
+  stroke-dasharray: 12 10;
+  animation: vascular-dash 3s linear infinite;
+}
+
+@keyframes vascular-dash {
+  to {
+    stroke-dashoffset: -44;
+  }
+}
+
+/* 6. Animated Retinal Laser Radar Scanner */
+.radar-scanner-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--dt-crimson-light) 15%,
+    var(--dt-orange-vibrant) 50%,
+    #14B8A6 85%,
+    transparent 100%
+  );
+  box-shadow: 0 0 16px 3px rgba(234, 88, 12, 0.65), 0 0 6px 1px rgba(20, 184, 166, 0.5);
+  animation: radar-sweep-anim 4.5s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 6;
+}
+
+@keyframes radar-sweep-anim {
+  0% { left: 8%; opacity: 0.2; }
+  15% { opacity: 0.9; }
+  85% { opacity: 0.9; }
+  100% { left: 92%; opacity: 0.2; }
+}
+
+/* 7. Aceternity 3D Bento Grid */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.5rem;
+}
+
+.bento-col-8 {
+  grid-column: span 8;
+}
+
+.bento-col-4 {
+  grid-column: span 4;
+}
+
+.bento-col-6 {
+  grid-column: span 6;
+}
+
+@media (max-width: 900px) {
+  .bento-col-8, .bento-col-4, .bento-col-6 {
+    grid-column: span 12;
+  }
+}
+
+/* 8. Pulsing Vascular Route Beam Animation */
+.animated-beam-line {
+  stroke-dasharray: 8 6;
+  animation: beam-flow 1.5s linear infinite;
+}
+
+@keyframes beam-flow {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}

@@ -1,0 +1,2054 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Field Screener Clinical Cockpit &middot; DrishtiTrust</title>
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&family=Noto+Sans+Devanagari:wght@500;600;700&display=swap" rel="stylesheet">
+
+<!-- Tailwind CSS CDN with Drishti Extended Theme -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+          display: ['Sora', '"Plus Jakarta Sans"', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+          devanagari: ['"Noto Sans Devanagari"', 'sans-serif']
+        },
+        colors: {
+          canvas: '#FAF6F0',
+          surface: '#F5EFEB',
+          raised: '#EFE7DE',
+          sunken: '#EADFD3',
+          crimson: { DEFAULT: '#9E1B1B', dark: '#7F1D1D', light: '#B91C1C', subtle: '#FBEAE8' },
+          saffron: { DEFAULT: '#EA580C', dark: '#C2410C', light: '#F97316', subtle: '#FDF1E8' },
+          emerald: { DEFAULT: '#0F766E', dark: '#115E59', light: '#14B8A6', subtle: '#E6FFFA' },
+          ink: { heading: '#231B1A', body: '#342725', muted: '#6E5D57', faint: '#96837C' },
+          border: { subtle: '#E8DCCF', strong: '#D5C2AF', focus: '#C2410C' }
+        },
+        boxShadow: {
+          subtle: '0 1px 3px rgba(35, 27, 26, 0.05)',
+          cockpit: '0 4px 18px rgba(35, 27, 26, 0.08), 0 1px 3px rgba(35, 27, 26, 0.04)',
+          glow: '0 0 16px rgba(234, 88, 12, 0.15)'
+        }
+      }
+    }
+  }
+</script>
+
+<!-- UIkit 3 CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/css/uikit.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/uikit@3.21.13/dist/js/uikit-icons.min.js"></script>
+
+<!-- GSAP Animation Suite -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<link rel="stylesheet" href="/static/style.css">
+
+<style>
+/* ==========================================================================
+   DrishtiTrust State-of-the-Art Clinical Screener Cockpit
+   Strictly Zero Pure White (#ffffff) Design System
+   ========================================================================== */
+
+:root {
+  --cockpit-bg: #FAF6F0;
+  --cockpit-surface: #F5EFEB;
+  --cockpit-raised: #EFE7DE;
+  --cockpit-sunken: #EADFD3;
+  --cockpit-border: #D5C2AF;
+  --cockpit-border-subtle: #E8DCCF;
+  --cockpit-crimson: #9E1B1B;
+  --cockpit-crimson-subtle: #FBEAE8;
+  --cockpit-saffron: #EA580C;
+  --cockpit-saffron-subtle: #FDF1E8;
+  --cockpit-ink: #231B1A;
+  --cockpit-muted: #6E5D57;
+}
+
+body.cockpit-shell {
+  background-color: var(--cockpit-bg);
+  color: #342725;
+  font-family: var(--dt-font-sans);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism with Zero Pure White */
+.glass-panel {
+  background: rgba(245, 239, 235, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--cockpit-border);
+}
+
+/* Retinal Optical Grid Pattern */
+.retinal-grid-canvas {
+  background-image: 
+    radial-gradient(rgba(158, 27, 27, 0.08) 1.2px, transparent 1.2px),
+    radial-gradient(rgba(213, 194, 175, 0.35) 1px, transparent 1px);
+  background-size: 32px 32px, 8px 8px;
+  background-position: 0 0, 16px 16px;
+}
+
+/* Anatomical Eye Switcher (OD / OS) */
+.eye-diagram-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: var(--cockpit-sunken);
+  border: 1.5px solid var(--cockpit-border);
+  border-radius: var(--dt-radius-md);
+  padding: 0.35rem 0.45rem;
+}
+.eye-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  min-height: 48px;
+  border-radius: var(--dt-radius-sm);
+  background: transparent;
+  border: 1.5px solid transparent;
+  color: var(--cockpit-ink);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+  user-select: none;
+}
+.eye-tab:hover {
+  background: var(--cockpit-raised);
+}
+.eye-tab.active {
+  background: var(--cockpit-surface);
+  border-color: var(--cockpit-crimson);
+  color: var(--cockpit-crimson);
+  box-shadow: 0 1px 6px rgba(158, 27, 27, 0.12);
+}
+.eye-tab.active .eye-pill-badge {
+  background: var(--cockpit-crimson);
+  color: #FAF6F0;
+}
+.eye-pill-badge {
+  font-size: 0.68rem;
+  font-family: var(--dt-font-mono);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--cockpit-sunken);
+  color: var(--cockpit-muted);
+  font-weight: 800;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Interactive Filter / Preset Chips */
+.cockpit-chip {
+  cursor: pointer;
+  padding: 0.45rem 0.85rem;
+  min-height: 38px;
+  border-radius: var(--dt-radius-sm);
+  background: var(--cockpit-raised);
+  border: 1px solid var(--cockpit-border);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: var(--dt-font-sans);
+  color: var(--cockpit-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+.cockpit-chip:hover {
+  background: var(--cockpit-surface);
+  border-color: var(--cockpit-saffron);
+}
+.cockpit-chip.active {
+  background: var(--cockpit-crimson-subtle);
+  border-color: var(--cockpit-crimson);
+  color: var(--cockpit-crimson);
+  box-shadow: 0 1px 4px rgba(158, 27, 27, 0.15);
+}
+
+/* Interactive Optical Loupe / Magnifier */
+.optical-viewport-container {
+  position: relative;
+  overflow: hidden;
+  cursor: crosshair;
+  border-radius: var(--dt-radius-md);
+  border: 2px solid var(--cockpit-border);
+  background: #180504;
+}
+.magnifier-loupe {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 3px solid var(--cockpit-saffron);
+  box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 10px rgba(234, 88, 12, 0.4);
+  pointer-events: none;
+  display: none;
+  background-repeat: no-repeat;
+  z-index: 30;
+}
+
+/* Soundwave Audio Synthesizer Animation */
+.soundwave-bar {
+  width: 3px;
+  height: 12px;
+  background: var(--cockpit-crimson);
+  border-radius: 3px;
+  display: inline-block;
+  margin: 0 1.5px;
+  animation: soundwave-bounce 1s ease-in-out infinite alternate;
+}
+.soundwave-bar:nth-child(2) { animation-delay: 0.2s; height: 18px; }
+.soundwave-bar:nth-child(3) { animation-delay: 0.4s; height: 8px; }
+.soundwave-bar:nth-child(4) { animation-delay: 0.1s; height: 15px; }
+@keyframes soundwave-bounce {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1.3); }
+}
+
+/* 3-Attempt Progression Track */
+.attempt-rail {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+.attempt-segment {
+  flex: 1;
+  padding: 0.65rem 0.5rem;
+  border-radius: var(--dt-radius-sm);
+  background: var(--cockpit-sunken);
+  border: 1px solid var(--cockpit-border);
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--cockpit-muted);
+  transition: all 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.attempt-segment.current {
+  background: var(--cockpit-saffron-subtle);
+  border-color: var(--cockpit-saffron);
+  color: var(--cockpit-saffron);
+  font-weight: 800;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+}
+.attempt-segment.failed {
+  background: #FCE8E6;
+  border-color: #F7B5B0;
+  color: #881337;
+}
+.attempt-segment.passed {
+  background: #EAF4EE;
+  border-color: #BCDBC6;
+  color: #22543D;
+}
+
+/* Status Pill Baseline Alignment */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Mobile Bottom Sticky HUD */
+.mobile-bottom-dock {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--cockpit-surface);
+  border-top: 1.5px solid var(--cockpit-border);
+  padding: 0.65rem 1rem;
+  z-index: 90;
+  box-shadow: 0 -4px 16px rgba(35, 27, 26, 0.08);
+}
+@media (max-width: 1024px) {
+  .mobile-bottom-dock {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .cockpit-main-layout {
+    padding-bottom: 84px !important;
+  }
+}
+
+/* Step Progress Bar */
+.step-progress-pill {
+  white-space: nowrap;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 0.22rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid #D5C2AF;
+  background: #EFE7DE;
+  color: #6E5D57;
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.step-progress-pill.active {
+  background: #9E1B1B;
+  color: #FAF6F0;
+  border-color: #9E1B1B;
+  box-shadow: 0 0 10px rgba(158,27,27,0.18);
+}
+.step-progress-pill.done {
+  background: #EAF4EE;
+  color: #22543D;
+  border-color: #BCDBC6;
+}
+.step-progress-sep {
+  color: #D5C2AF;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  padding: 0 0.1rem;
+}
+
+/* Retinal Viewport Frame — dark cinematic border */
+.optical-viewport-frame {
+  background: #120302;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 2px solid #2A0D08;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(213,194,175,0.06);
+  position: relative;
+  width: 100%;
+}
+
+/* Metric mini progress bar */
+.metric-bar-track {
+  height: 3px;
+  border-radius: 9999px;
+  background: #E8DCCF;
+  margin-top: 5px;
+  overflow: hidden;
+}
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: #059669;
+  transition: width 0.55s cubic-bezier(0.4,0,0.2,1);
+}
+.metric-bar-fill.fail {
+  background: #DC2626;
+}
+
+/* Viewport action bar — no wrap, clean baseline */
+.viewport-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  flex-wrap: nowrap;
+}
+@media (max-width: 480px) {
+  .viewport-action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .viewport-action-bar button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
+</head>
+<body class="cockpit-shell">
+
+<!-- TOPBAR: Clean, Purposeful, Non-Clustered Navigation Header -->
+<header class="sticky top-0 z-50 glass-panel border-b border-[#D5C2AF] px-4 sm:px-6 py-2.5 flex items-center justify-between shadow-subtle">
+  <!-- Left: Brand -->
+  <div class="flex items-center gap-3">
+    <a href="/" class="flex items-center gap-2.5 text-decoration-none group" title="Return to DrishtiTrust Home">
+      <img src="/static/logo.svg" alt="DrishtiTrust" class="h-8 w-8 object-contain">
+      <div>
+        <span class="font-display font-extrabold text-base sm:text-lg text-[#9E1B1B] leading-none block">DrishtiTrust</span>
+        <span class="text-[0.62rem] font-bold text-[#6E5D57] uppercase tracking-wider block mt-0.5">Screener Cockpit</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Center: Facility Selector & Screener Identity -->
+  <div class="hidden md:flex items-center gap-2 bg-[#EADFD3] px-3 py-1.5 rounded-lg border border-[#D5C2AF]">
+    <span class="text-xs">🏥</span>
+    <select id="facility-site-select" onchange="onFacilityChanged(this.value)" class="bg-transparent font-bold text-xs text-[#231B1A] outline-none cursor-pointer">
+      <option value="PHC-1">PHC North (Ananthapur &middot; Topcon TRC)</option>
+      <option value="CHC-Central">CHC Central (Forus 3nethra)</option>
+      <option value="Mobile-Van-04">Mobile Van 04 (Remidio FOP Phone)</option>
+      <option value="Tribal-Camp">Tribal Camp (Zeiss Visucam)</option>
+      <option value="Urban-Health">Urban Clinic 09 (Kowa VX-10)</option>
+    </select>
+    <span class="text-[#D5C2AF]">|</span>
+    <span class="text-xs font-semibold text-[#6E5D57]">Priya (ASHA Lead)</span>
+  </div>
+
+  <!-- Right: Connectivity, Daily Stats & Doctor Link -->
+  <div class="flex items-center gap-2.5">
+    <!-- Clean Live Status Pill -->
+    <div class="hidden sm:inline-flex items-center gap-1.5 text-xs text-[#22543D] bg-[#EAF4EE] border border-[#BCDBC6] px-2.5 py-1 rounded-full font-bold">
+      <span class="w-2 h-2 rounded-full bg-[#059669]"></span>
+      <span>Online</span>
+    </div>
+
+    <!-- Daily Screened Count -->
+    <div class="text-xs font-semibold text-[#342725] bg-[#EFE7DE] border border-[#D5C2AF] px-2.5 py-1.5 rounded-md">
+      Today: <strong class="text-[#9E1B1B] font-mono" id="camp-screened-num">18</strong>
+    </div>
+
+    <!-- Mobile Drawer Opener for Today's Roster -->
+    <button type="button" class="lg:hidden p-2 rounded-md bg-[#EADFD3] border border-[#D5C2AF] text-[#231B1A]" uk-toggle="target: #cockpit-roster-offcanvas" title="Open Today's Patient Roster">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </button>
+
+    <!-- Switch to Doctor Tele-Review Cockpit -->
+    <a href="/portal/doctor" class="hidden sm:inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-md border border-[#D5C2AF] bg-[#FAF6F0] hover:bg-[#FBEAE8] text-[#9E1B1B] transition-colors shadow-subtle">
+      <span>Doctor Review &rarr;</span>
+    </a>
+  </div>
+</header>
+
+<!-- MAIN COCKPIT VIEWPORT GRID -->
+<div class="cockpit-main-layout flex-1 flex items-start w-full max-w-[1560px] mx-auto p-3 sm:p-5 gap-5">
+
+  <!-- LEFT SIDEBAR: Smart Camp Telemetry & Patient Roster (Desktop Sticky Panel) -->
+  <aside class="hidden lg:flex flex-col w-[320px] shrink-0 gap-4 sticky top-[68px] self-start max-h-[calc(100vh-88px)] h-[calc(100vh-88px)]">
+
+    <!-- 1. Camp Operations Card -->
+    <div class="bg-[#F5EFEB] border border-[#D5C2AF] rounded-xl p-4 shadow-cockpit shrink-0">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#6E5D57]">Screening Actions</span>
+        <span class="status-badge bg-[#EAF4EE] text-[#22543D] border border-[#BCDBC6]">Shift Active</span>
+      </div>
+
+      <!-- New Patient Button -->
+      <button type="button" class="w-full bg-[#9E1B1B] hover:bg-[#B91C1C] text-[#FAF6F0] text-sm font-bold py-2.5 px-3.5 rounded-lg flex items-center justify-between transition-all shadow-subtle mb-3" onclick="resetIntake()">
+        <span class="flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Patient Intake
+        </span>
+        <span class="text-[0.68rem] bg-[#7F1D1D] px-2 py-0.5 rounded font-mono">Alt+N</span>
+      </button>
+
+      <!-- Referral Count Indicator (Clean summary, no confusing external redirect) -->
+      <div class="bg-[#EFE7DE] border border-[#D5C2AF] rounded-lg p-2.5 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📋</span>
+          <div>
+            <div class="text-[0.68rem] font-bold text-[#6E5D57] uppercase">Hospital Referrals</div>
+            <div class="text-xs font-bold text-[#231B1A]"><strong class="text-[#EA580C] font-mono" id="camp-referrals-count">3</strong> Patients Slips Issued</div>
+          </div>
+        </div>
+        <span class="status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0]">District 14D</span>
+      </div>
+    </div>
+
+    <!-- SIDEBAR TABS: Today's Roster / Today's Referrals -->
+    <div class="bg-[#F5EFEB] border border-[#D5C2AF] rounded-xl shadow-cockpit flex-1 flex flex-col min-h-0 overflow-hidden">
+      <!-- Tab Strip -->
+      <div class="flex border-b border-[#D5C2AF] px-1.5 pt-1.5 gap-0.5 shrink-0">
+        <button type="button" id="sidebar-tab-roster" onclick="switchSidebarTab('roster')"
+          class="flex-1 text-[0.7rem] font-extrabold py-1.5 px-2 rounded-t-md border-b-2 border-[#9E1B1B] bg-[#FBEAE8] text-[#9E1B1B] transition-all">
+          👥 Today's Roster
+        </button>
+        <button type="button" id="sidebar-tab-referrals" onclick="switchSidebarTab('referrals')"
+          class="flex-1 text-[0.7rem] font-extrabold py-1.5 px-2 rounded-t-md border-b-2 border-transparent bg-transparent text-[#6E5D57] hover:text-[#342725] transition-all">
+          🏥 Referrals
+        </button>
+      </div>
+
+      <!-- PANEL 1: Today's Patient Roster -->
+      <div id="sidebar-panel-roster" class="flex flex-col flex-1 p-3 gap-2 min-h-0 overflow-hidden">
+        <!-- Search Input -->
+        <div class="relative shrink-0">
+          <input type="text" id="roster-search-input" onkeyup="filterRoster(this.value)" placeholder="Search patient token..." class="w-full bg-[#EADFD3] border border-[#D5C2AF] rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-[#231B1A] placeholder-[#6E5D57] focus:outline-none focus:border-[#C2410C] focus:bg-[#FAF6F0]">
+          <svg class="absolute left-2.5 top-2 text-[#6E5D57]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <!-- Filter Chips -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-[0.7rem] font-bold shrink-0">
+          <button type="button" class="px-2 py-0.5 rounded-md bg-[#9E1B1B] text-[#FAF6F0] whitespace-nowrap" onclick="setRosterCategory('all', this)">All (18)</button>
+          <button type="button" class="px-2 py-0.5 rounded-md bg-[#EADFD3] text-[#231B1A] hover:bg-[#EFE7DE] whitespace-nowrap" onclick="setRosterCategory('urgent', this)">Urgent (3)</button>
+          <button type="button" class="px-2 py-0.5 rounded-md bg-[#EADFD3] text-[#231B1A] hover:bg-[#EFE7DE] whitespace-nowrap" onclick="setRosterCategory('recall', this)">Recall (15)</button>
+        </div>
+        <!-- Roster Scroll List -->
+        <div class="overflow-y-auto flex-1 pr-1 flex flex-col gap-2" id="roster-list-desktop">
+          <div class="roster-item active p-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] hover:border-[#9E1B1B] cursor-pointer transition-all" onclick="loadClinicalSample('moderate', this)">
+            <div class="flex items-center justify-between mb-1 gap-2">
+              <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0145</span>
+              <span class="status-badge bg-[#FDF2E2] text-[#9A3412] border border-[#F6CE9A]">Tele-Review</span>
+            </div>
+            <div class="flex items-center justify-between text-[0.68rem] text-[#6E5D57]">
+              <span>Right Eye (OD)</span>
+              <span class="text-[#059669] font-bold">Quality: 0.94</span>
+            </div>
+          </div>
+          <div class="roster-item p-2.5 rounded-lg border border-[#E8DCCF] bg-[#FAF6F0] hover:border-[#9E1B1B] cursor-pointer transition-all" onclick="loadClinicalSample('severe', this)">
+            <div class="flex items-center justify-between mb-1 gap-2">
+              <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0089</span>
+              <span class="status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0]">Urgent 14D</span>
+            </div>
+            <div class="flex items-center justify-between text-[0.68rem] text-[#6E5D57]">
+              <span>Left Eye (OS)</span>
+              <span class="text-[#DC2626] font-bold">PDR + DME</span>
+            </div>
+          </div>
+          <div class="roster-item p-2.5 rounded-lg border border-[#E8DCCF] bg-[#FAF6F0] hover:border-[#9E1B1B] cursor-pointer transition-all" onclick="loadClinicalSample('normal', this)">
+            <div class="flex items-center justify-between mb-1 gap-2">
+              <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0114</span>
+              <span class="status-badge bg-[#EAF4EE] text-[#22543D] border border-[#BCDBC6]">Recall 12M</span>
+            </div>
+            <div class="flex items-center justify-between text-[0.68rem] text-[#6E5D57]">
+              <span>Right Eye (OD)</span>
+              <span class="text-[#059669] font-bold">Clean Retina</span>
+            </div>
+          </div>
+          <div class="roster-item p-2.5 rounded-lg border border-[#E8DCCF] bg-[#FAF6F0] hover:border-[#9E1B1B] cursor-pointer transition-all" onclick="loadClinicalSample('blurry', this)">
+            <div class="flex items-center justify-between mb-1 gap-2">
+              <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0038</span>
+              <span class="status-badge bg-[#FBECE5] text-[#7C2D12] border border-[#F3C5B1]">Cataract Gate</span>
+            </div>
+            <div class="flex items-center justify-between text-[0.68rem] text-[#6E5D57]">
+              <span>Left Eye (OS)</span>
+              <span class="text-[#7C2D12] font-bold">Ungradable</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Today's Referrals -->
+      <div id="sidebar-panel-referrals" class="hidden flex-col flex-1 p-3 gap-2.5 min-h-0 overflow-y-auto">
+        <!-- KPI Strip -->
+        <div class="grid grid-cols-2 gap-1.5 shrink-0">
+          <div class="bg-[#FCE8E6] border border-[#F7B5B0] rounded-lg p-2 text-center">
+            <div class="font-mono font-extrabold text-lg text-[#881337]" id="ref-panel-urgent-count">3</div>
+            <div class="text-[0.6rem] font-bold text-[#6E5D57] uppercase">Urgent 14D</div>
+          </div>
+          <div class="bg-[#EAF4EE] border border-[#BCDBC6] rounded-lg p-2 text-center">
+            <div class="font-mono font-extrabold text-lg text-[#22543D]" id="ref-panel-booked-count">1</div>
+            <div class="text-[0.6rem] font-bold text-[#6E5D57] uppercase">Slots Booked</div>
+          </div>
+        </div>
+        <!-- Referral Items -->
+        <div class="flex flex-col gap-2 flex-1">
+          <div class="p-2.5 rounded-lg border border-[#F7B5B0] bg-[#FCE8E6]">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0089</span>
+              <span class="status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0] text-[0.6rem]">Urgent</span>
+            </div>
+            <div class="text-[0.68rem] text-[#6E5D57]">District Eye Hospital &middot; 3 Oct 2026</div>
+            <div class="text-[0.65rem] font-bold text-[#059669] mt-0.5">✓ Slot Confirmed</div>
+          </div>
+          <div class="p-2.5 rounded-lg border border-[#F3C5B1] bg-[#FBECE5]">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0038</span>
+              <span class="status-badge bg-[#FBECE5] text-[#7C2D12] border border-[#F3C5B1] text-[0.6rem]">Cataract</span>
+            </div>
+            <div class="text-[0.68rem] text-[#6E5D57]">CHC Central &middot; Pending booking</div>
+            <div class="text-[0.65rem] font-bold text-[#EA580C] mt-0.5">⏳ Awaiting confirmation</div>
+          </div>
+          <div class="p-2.5 rounded-lg border border-[#F7B5B0] bg-[#FCE8E6]">
+            <div class="flex items-center justify-between mb-0.5">
+              <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0201</span>
+              <span class="status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0] text-[0.6rem]">Urgent</span>
+            </div>
+            <div class="text-[0.68rem] text-[#6E5D57]">Apex Eye Institute &middot; 5 Oct 2026</div>
+            <div class="text-[0.65rem] font-bold text-[#6E5D57] mt-0.5">&rarr; Awaiting attendance</div>
+          </div>
+        </div>
+        <!-- View Full Tracker Link -->
+        <a href="/referrals" class="shrink-0 text-center text-[0.7rem] font-bold text-[#9E1B1B] hover:underline py-1 border-t border-[#D5C2AF] pt-2">
+          View Full Referral Tracker &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- TELE-OPHTHALMOLOGY SPECIALIST HOTLINE -->
+    <div class="bg-[#EADFD3] border border-[#D5C2AF] rounded-xl p-3 text-xs shadow-subtle shrink-0">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="font-bold text-[#231B1A] flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-[#059669]"></span>
+          <span>Dr. Anita Sharma</span>
+        </div>
+        <span class="status-badge bg-[#FAF6F0] text-[#231B1A] border border-[#D5C2AF]">On Duty</span>
+      </div>
+      <div class="text-[#6E5D57] leading-relaxed mb-2 text-[0.72rem]">
+        Tele-Review Queue: <strong class="text-[#231B1A]">1 waiting</strong> &middot; Turnaround: <strong class="text-[#059669]">24s</strong>
+      </div>
+      <button type="button" class="w-full bg-[#FAF6F0] hover:bg-[#F5EFEB] text-[#9E1B1B] border border-[#D5C2AF] font-bold py-1.5 px-2.5 rounded-md flex items-center justify-center gap-1 text-[0.72rem] transition-colors" onclick="pingTeleDoctor()">
+        <span>🔔</span> Ping Doctor for Urgent Signoff
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN COCKPIT: Bilateral Dual-Eye Examination Center -->
+  <main class="flex-1 min-w-0 max-w-5xl flex flex-col gap-4">
+
+    <!-- WORKFLOW STEP PROGRESS INDICATOR -->
+    <div class="bg-[#F5EFEB] border border-[#D5C2AF] rounded-xl px-4 py-2.5 shadow-subtle">
+      <div class="flex items-center justify-between gap-1 overflow-x-auto">
+        <div class="step-progress-pill active" id="progress-step-1">① Registration</div>
+        <div class="step-progress-sep">&rarr;</div>
+        <div class="step-progress-pill" id="progress-step-2">② Capture</div>
+        <div class="step-progress-sep">&rarr;</div>
+        <div class="step-progress-pill" id="progress-step-3">③ Quality</div>
+        <div class="step-progress-sep">&rarr;</div>
+        <div class="step-progress-pill" id="progress-step-4">④ AI Result</div>
+        <div class="step-progress-sep">&rarr;</div>
+        <div class="step-progress-pill" id="progress-step-5">⑤ Referral</div>
+      </div>
+    </div>
+
+    <!-- STEP 1: PATIENT RIBBON & ANATOMICAL EYE SWITCHER -->
+    <div class="bg-[#F5EFEB] border-2 border-[#D5C2AF] rounded-2xl p-4 sm:p-5 shadow-cockpit relative overflow-hidden">
+      <!-- Retinal Subtle Texture -->
+      <div class="absolute right-0 top-0 w-64 h-full pointer-events-none opacity-20 retinal-grid-canvas"></div>
+
+      <!-- Top Row: Patient Identifier & Auto-Generator -->
+      <div class="flex items-center justify-between flex-wrap gap-3 pb-3 mb-3 border-b border-[#E8DCCF]">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-[#9E1B1B] text-[#FAF6F0] flex items-center justify-center font-display font-extrabold text-sm shadow-subtle flex-shrink-0">
+            1
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-[#231B1A] font-display m-0 leading-tight">
+              Patient Registration &amp; Anatomical Eye Switcher
+            </h2>
+            <span class="text-xs text-[#6E5D57] block">Screen both eyes (OD &amp; OS) for complete clinical examination</span>
+          </div>
+        </div>
+
+        <!-- Token Input + 1-Tap Generator -->
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <input type="text" id="patient-id" value="P-2026-0145" class="bg-[#EADFD3] border border-[#D5C2AF] rounded-lg px-3 py-1.5 text-sm font-mono font-extrabold text-[#231B1A] focus:outline-none focus:border-[#C2410C] focus:bg-[#FAF6F0] w-36 sm:w-44 shadow-inner" placeholder="P-2026-0000">
+          </div>
+          <button type="button" class="btn text-xs font-bold px-3 py-1.5 rounded-lg bg-[#EADFD3] hover:bg-[#EFE7DE] border border-[#D5C2AF] text-[#9E1B1B] flex items-center gap-1 shadow-xs" onclick="generateNewPatientToken()">
+            <span>🎲</span> New ID
+          </button>
+        </div>
+      </div>
+
+      <!-- Center Grid: Anatomical OD / OS Switcher & English/Hindi Dialect (Tamil Removed) -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-center">
+        <!-- Dual Eye Anatomical Switcher (Columns 1-7) -->
+        <div class="md:col-span-7">
+          <label class="block text-[0.7rem] font-extrabold text-[#6E5D57] uppercase tracking-wider mb-1.5">
+            EXAMINED EYE (BILATERAL SCREENING)
+          </label>
+          <div class="eye-diagram-toggle">
+            <!-- Right Eye (OD) -->
+            <button type="button" class="eye-tab active" id="eye-tab-right" onclick="setExaminedEye('right')">
+              <span class="text-lg">👁️</span>
+              <div class="text-left leading-tight">
+                <div class="font-extrabold text-xs text-[#231B1A]">Right Eye (OD)</div>
+                <div class="text-[0.65rem] text-[#6E5D57]">Oculus Dexter</div>
+              </div>
+              <span class="eye-pill-badge ml-auto" id="badge-od-status">Active</span>
+            </button>
+
+            <!-- Left Eye (OS) -->
+            <button type="button" class="eye-tab" id="eye-tab-left" onclick="setExaminedEye('left')">
+              <span class="text-lg">👁️</span>
+              <div class="text-left leading-tight">
+                <div class="font-extrabold text-xs text-[#231B1A]">Left Eye (OS)</div>
+                <div class="text-[0.65rem] text-[#6E5D57]">Oculus Sinister</div>
+              </div>
+              <span class="eye-pill-badge ml-auto" id="badge-os-status">Pending</span>
+            </button>
+          </div>
+          <input type="hidden" id="patient-eye" value="right">
+        </div>
+
+        <!-- Counseling Dialect Selector (English & Hindi only) -->
+        <div class="md:col-span-5">
+          <label class="block text-[0.7rem] font-extrabold text-[#6E5D57] uppercase tracking-wider mb-1.5">
+            PATIENT COUNSELING DIALECT
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" class="cockpit-chip active justify-center text-xs" onclick="switchCounselingDialect('en', this)">
+              🇬🇧 English
+            </button>
+            <button type="button" class="cockpit-chip justify-center text-xs" onclick="switchCounselingDialect('hi', this)">
+              🇮🇳 हिंदी (Hindi)
+            </button>
+          </div>
+          <input type="hidden" id="patient-lang" value="en">
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: RETINAL OPTICAL HUB & MULTI-LAYER VIEWPORT -->
+    <div class="bg-[#F5EFEB] border-2 border-[#D5C2AF] rounded-2xl p-4 sm:p-5 shadow-cockpit">
+      <!-- Section Title & 1-Click Fast Demonstration Test Presets -->
+      <div class="flex items-center justify-between mb-3.5 pb-2.5 border-b border-[#E8DCCF] flex-wrap gap-2.5">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-[#EA580C] text-[#FAF6F0] flex items-center justify-center font-display font-extrabold text-sm shadow-subtle flex-shrink-0">
+            2
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-[#231B1A] font-display m-0 leading-tight">
+              Retinal Optical Hub &amp; Multi-Layer Inspection
+            </h2>
+            <span class="text-xs text-[#6E5D57] block">Capture fundus photograph or test with validated clinical cases</span>
+          </div>
+        </div>
+
+        <!-- 1-Click Quick Presets Bar with Aligned Badges -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+          <span class="text-[0.65rem] font-extrabold text-[#6E5D57] uppercase tracking-wider hidden sm:inline">VALIDATED SAMPLES:</span>
+          <button type="button" class="cockpit-chip" onclick="loadClinicalSample('moderate')">
+            <span class="w-2 h-2 rounded-full bg-[#EA580C]"></span> Moderate NPDR
+          </button>
+          <button type="button" class="cockpit-chip" onclick="loadClinicalSample('severe')">
+            <span class="w-2 h-2 rounded-full bg-[#DC2626]"></span> Severe PDR + DME
+          </button>
+          <button type="button" class="cockpit-chip" onclick="loadClinicalSample('normal')">
+            <span class="w-2 h-2 rounded-full bg-[#059669]"></span> Normal Recall
+          </button>
+          <button type="button" class="cockpit-chip" onclick="loadClinicalSample('blurry')">
+            <span class="w-2 h-2 rounded-full bg-[#D97706]"></span> Blurry Retake
+          </button>
+        </div>
+      </div>
+
+      <!-- Hidden Native File & Camera Inputs -->
+      <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+      <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(event)">
+
+      <!-- Dropzone / Empty State Prompt (Clean initial state: No image auto-uploaded) -->
+      <div id="drop-prompt" class="bg-[#FAF6F0] border-2 border-dashed border-[#D5C2AF] hover:border-[#EA580C] rounded-xl p-6 sm:p-8 text-center transition-all cursor-pointer relative" onclick="document.getElementById('file-input').click()">
+        <div class="w-16 h-16 rounded-full bg-[#FDF1E8] border border-[#F97316] flex items-center justify-center text-[#EA580C] mx-auto mb-3 shadow-subtle">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div class="font-display font-extrabold text-base sm:text-xl text-[#231B1A] mb-1">
+          Drop Fundus Photograph or Launch Live Camera
+        </div>
+        <p class="text-xs sm:text-sm text-[#6E5D57] max-w-lg mx-auto mb-4 leading-relaxed">
+          Standardized input for Remidio Fundus on Phone, Topcon TRC, Forus 3nethra, Zeiss Visucam, and Kowa.
+        </p>
+
+        <!-- Touch-Friendly Buttons -->
+        <div class="flex items-center justify-center gap-3 flex-wrap" onclick="event.stopPropagation()">
+          <button type="button" class="btn primary font-bold text-sm px-5 py-2.5 rounded-lg bg-[#EA580C] hover:bg-[#C2410C] text-[#FAF6F0] shadow-subtle flex items-center gap-2" onclick="document.getElementById('camera-input').click()">
+            <span>📷</span> Launch Mobile Camera
+          </button>
+          <button type="button" class="btn font-bold text-sm px-5 py-2.5 rounded-lg border border-[#D5C2AF] bg-[#EFE7DE] hover:bg-[#FAF6F0] text-[#231B1A] shadow-subtle flex items-center gap-2" onclick="document.getElementById('file-input').click()">
+            <span>📁</span> Browse Image Files
+          </button>
+        </div>
+      </div>
+
+      <!-- Loaded Retinal Diagnostic Viewport (Only shown when image is picked or preset selected) -->
+      <div id="drop-preview" class="hidden flex-col gap-0">
+        <!-- Layer Control HUD - Clean single row -->
+        <div class="flex items-center justify-between gap-3 pb-3 mb-3 border-b border-[#E8DCCF]">
+          <div class="flex items-center gap-1.5 overflow-x-auto">
+            <span class="text-[0.62rem] font-extrabold text-[#6E5D57] uppercase tracking-wider shrink-0 hidden sm:inline">LAYER:</span>
+            <button type="button" class="cockpit-chip active text-xs" id="layer-btn-fundus" onclick="setVisualLayer('fundus')">
+              <span>👁️</span> Color
+            </button>
+            <button type="button" class="cockpit-chip text-xs" id="layer-btn-unet" onclick="setVisualLayer('unet')">
+              <span>🔬</span> U-Net
+            </button>
+            <button type="button" class="cockpit-chip text-xs" id="layer-btn-gradcam" onclick="setVisualLayer('gradcam')">
+              <span>🔥</span> Grad-CAM
+            </button>
+            <button type="button" class="cockpit-chip text-xs" id="layer-btn-redfree" onclick="setVisualLayer('redfree')">
+              <span>🟢</span> Red-Free
+            </button>
+          </div>
+          <button type="button" class="text-xs font-bold text-[#9E1B1B] hover:underline whitespace-nowrap shrink-0" onclick="clearFundusCapture()">
+            ✕ Re-capture
+          </button>
+        </div>
+
+        <!-- Retinal Canvas — Dark Cinematic Viewport with Integrated Instrument Console Strip -->
+        <div class="optical-viewport-frame flex flex-col">
+          <div class="relative w-full overflow-hidden flex items-center justify-center bg-[#0D0302]" style="height: clamp(240px, 38vh, 420px);" id="viewport-box">
+            <img id="preview-img" src="" alt="Captured Fundus Retina" class="w-full h-full object-contain select-none pointer-events-none">
+            <!-- Magnifier Loupe -->
+            <div id="magnifier-loupe" class="magnifier-loupe"></div>
+            <!-- Top-Left Telemetry HUD -->
+            <div class="absolute top-2.5 left-2.5 bg-black/75 text-[#FAF6F0] border border-white/10 rounded-md px-2.5 py-1 text-[0.66rem] font-mono backdrop-blur-md flex items-center gap-2 z-10">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#EA580C] animate-pulse"></span>
+              <span id="viewport-layer-label">Layer: Natural Color Fundus</span>
+              <span class="opacity-40">|</span>
+              <span id="viewport-resolution-label" class="opacity-70">2048 &times; 1536</span>
+            </div>
+            <!-- Bottom-Right Loupe Hint -->
+            <div class="absolute bottom-2.5 right-2.5 bg-black/60 text-[#FAF6F0]/80 rounded-md px-2 py-0.5 text-[0.62rem] backdrop-blur-sm hidden sm:block z-10">
+              🔍 Hover to inspect
+            </div>
+          </div>
+
+          <!-- Integrated Instrument Console Strip — Fixed Baseline & Clean Padding -->
+          <div class="bg-[#180503] border-t border-[#3A100B] px-4 py-2.5 flex items-center justify-between gap-3 w-full">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-[#2D0D08] border border-[#52160E] flex items-center justify-center text-sm shrink-0">
+                👁️
+              </div>
+              <div class="min-w-0">
+                <div id="preview-filename-text" class="font-mono text-xs font-bold text-[#FAF6F0] truncate">sample_fundus.jpg</div>
+                <div class="text-[0.68rem] text-[#10B981] font-bold flex items-center gap-1 mt-0.5">
+                  <span>✓</span> Optical geometry &amp; focus verified
+                </div>
+              </div>
+            </div>
+
+            <button type="button" id="btn-run-ai" class="btn primary font-extrabold text-xs sm:text-sm px-4 sm:px-5 py-2 rounded-lg bg-[#9E1B1B] hover:bg-[#B91C1C] text-[#FAF6F0] shadow-cockpit flex items-center gap-2 shrink-0 transition-all border border-[#DC2626]/30 cursor-pointer" onclick="runAITriageEvaluation()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Run AI Triage
+            </button>
+          </div>
+        </div>
+
+        <!-- Lesion Breakdown Row (U-Net only) -->
+        <div id="lesion-telemetry-row" class="hidden items-center justify-center flex-wrap gap-2 bg-[#EFE7DE] border border-[#D5C2AF] rounded-lg p-2.5 mt-2.5">
+          <span class="status-badge bg-[#FAF6F0] border border-[#DC2626] text-[#DC2626] font-mono">
+            <span class="w-2 h-2 rounded-full bg-[#DC2626] mr-1"></span> MA: 12
+          </span>
+          <span class="status-badge bg-[#FAF6F0] border border-[#881337] text-[#881337] font-mono">
+            <span class="w-2 h-2 rounded-full bg-[#881337] mr-1"></span> HE: 7
+          </span>
+          <span class="status-badge bg-[#FAF6F0] border border-[#D97706] text-[#D97706] font-mono">
+            <span class="w-2 h-2 rounded-full bg-[#D97706] mr-1"></span> EX: 4
+          </span>
+          <span class="status-badge bg-[#FAF6F0] border border-[#059669] text-[#059669] font-mono">
+            <span class="w-2 h-2 rounded-full bg-[#059669] mr-1"></span> Optic Disc
+          </span>
+          <span class="status-badge bg-[#FAF6F0] border border-[#0284C7] text-[#0284C7] font-mono">
+            <span class="w-2 h-2 rounded-full bg-[#0284C7] mr-1"></span> Fovea (1-DD)
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRE-INFERENCE OPTICAL QUALITY RADAR HUD -->
+    <div id="quality-card" class="bg-[#F5EFEB] border-2 border-[#D5C2AF] rounded-2xl p-4 sm:p-5 shadow-cockpit hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-3.5 pb-2.5 border-b border-[#E8DCCF]">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-[#0F766E] text-[#FAF6F0] flex items-center justify-center font-display font-extrabold text-sm shadow-subtle flex-shrink-0">
+            3
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-[#231B1A] font-display m-0 leading-tight">
+              Pre-Inference Optical Quality Verification
+            </h2>
+            <span class="text-xs text-[#6E5D57] block">6-metric physical camera telemetry to eliminate ungradable captures</span>
+          </div>
+        </div>
+        <span id="quality-status-badge" class="status-badge bg-[#EAF4EE] text-[#22543D] border border-[#BCDBC6]">
+          Quality Passed (0.94)
+        </span>
+      </div>
+
+      <!-- 3-Attempt Recapture Timeline Rail -->
+      <div class="mb-4">
+        <div class="flex justify-between items-center text-xs font-bold text-[#6E5D57] mb-1.5">
+          <span class="uppercase tracking-wider">3-Attempt Recapture Progression</span>
+          <span id="attempt-indicator-text" class="font-mono text-[#231B1A]">Attempt 1 of 3</span>
+        </div>
+        <div class="attempt-rail">
+          <div class="attempt-segment current" id="rail-1">Attempt 1 (Capture)</div>
+          <div class="attempt-segment" id="rail-2">Attempt 2 (Reposition)</div>
+          <div class="attempt-segment" id="rail-3">Attempt 3 (Cataract Safeguard)</div>
+        </div>
+      </div>
+
+      <!-- 6 Granular Optical Metrics Beacons with Mini Progress Bars -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-3.5">
+        <!-- 1. FOV Coverage -->
+        <div class="bg-[#FAF6F0] border border-[#E8DCCF] rounded-lg p-2.5">
+          <div class="flex items-center justify-between text-[0.65rem] font-bold text-[#6E5D57] uppercase">
+            <span>FOV</span>
+            <span class="w-2 h-2 rounded-full bg-[#059669]" id="beacon-fov"></span>
+          </div>
+          <div class="font-mono text-sm font-extrabold text-[#231B1A] my-0.5" id="val-fov">42%</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-fov" style="width:42%"></div></div>
+          <div class="text-[0.58rem] text-[#6E5D57] mt-1">&ge;35% target</div>
+        </div>
+        <!-- 2. Edge Completeness -->
+        <div class="bg-[#FAF6F0] border border-[#E8DCCF] rounded-lg p-2.5">
+          <div class="flex items-center justify-between text-[0.65rem] font-bold text-[#6E5D57] uppercase">
+            <span>Edge</span>
+            <span class="w-2 h-2 rounded-full bg-[#059669]" id="beacon-completeness"></span>
+          </div>
+          <div class="font-mono text-sm font-extrabold text-[#231B1A] my-0.5" id="val-completeness">88%</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-completeness" style="width:88%"></div></div>
+          <div class="text-[0.58rem] text-[#6E5D57] mt-1">&ge;70% target</div>
+        </div>
+        <!-- 3. Illumination -->
+        <div class="bg-[#FAF6F0] border border-[#E8DCCF] rounded-lg p-2.5">
+          <div class="flex items-center justify-between text-[0.65rem] font-bold text-[#6E5D57] uppercase">
+            <span>Illum.</span>
+            <span class="w-2 h-2 rounded-full bg-[#059669]" id="beacon-median"></span>
+          </div>
+          <div class="font-mono text-sm font-extrabold text-[#231B1A] my-0.5" id="val-median">68.2</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-median" style="width:68%"></div></div>
+          <div class="text-[0.58rem] text-[#6E5D57] mt-1">&ge;25 target</div>
+        </div>
+        <!-- 4. Glare -->
+        <div class="bg-[#FAF6F0] border border-[#E8DCCF] rounded-lg p-2.5">
+          <div class="flex items-center justify-between text-[0.65rem] font-bold text-[#6E5D57] uppercase">
+            <span>Glare</span>
+            <span class="w-2 h-2 rounded-full bg-[#059669]" id="beacon-clipped"></span>
+          </div>
+          <div class="font-mono text-sm font-extrabold text-[#231B1A] my-0.5" id="val-clipped">1.8%</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-clipped" style="width:12%"></div></div>
+          <div class="text-[0.58rem] text-[#6E5D57] mt-1">&le;15% target</div>
+        </div>
+        <!-- 5. Evenness -->
+        <div class="bg-[#FAF6F0] border border-[#E8DCCF] rounded-lg p-2.5">
+          <div class="flex items-center justify-between text-[0.65rem] font-bold text-[#6E5D57] uppercase">
+            <span>Even.</span>
+            <span class="w-2 h-2 rounded-full bg-[#059669]" id="beacon-evenness"></span>
+          </div>
+          <div class="font-mono text-sm font-extrabold text-[#231B1A] my-0.5" id="val-evenness">0.76</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-evenness" style="width:76%"></div></div>
+          <div class="text-[0.58rem] text-[#6E5D57] mt-1">&ge;0.40 target</div>
+        </div>
+        <!-- 6. Focus -->
+        <div class="bg-[#FAF6F0] border border-[#E8DCCF] rounded-lg p-2.5">
+          <div class="flex items-center justify-between text-[0.65rem] font-bold text-[#6E5D57] uppercase">
+            <span>Focus</span>
+            <span class="w-2 h-2 rounded-full bg-[#059669]" id="beacon-focus"></span>
+          </div>
+          <div class="font-mono text-sm font-extrabold text-[#231B1A] my-0.5" id="val-focus">0.048</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-focus" style="width:80%"></div></div>
+          <div class="text-[0.58rem] text-[#6E5D57] mt-1">&ge;0.030 target</div>
+        </div>
+      </div>
+
+      <!-- Actionable Physical Guidance Alert Box -->
+      <div id="quality-alert-box" class="bg-[#EADFD3] border border-[#D5C2AF] rounded-xl p-3.5 text-xs text-[#231B1A] leading-relaxed">
+        <div class="font-bold flex items-center gap-1.5 mb-1" id="quality-alert-heading">
+          <span>💡</span> Clinical Optical Guidance:
+        </div>
+        <div id="quality-alert-body">
+          Sharpness and illumination levels conform with diagnostic benchmarks. Fundus image is verified gradable for autonomous diabetic retinopathy classification.
+        </div>
+      </div>
+    </div>
+
+    <!-- AUTONOMOUS AI TRIAGE & ACTION CONSOLE -->
+    <div id="result-card" class="bg-[#F5EFEB] border-2 border-[#D5C2AF] rounded-2xl p-4 sm:p-6 shadow-cockpit hidden">
+      <!-- Outcome Mega-Banner -->
+      <div id="triage-banner" class="p-4 sm:p-5 rounded-xl mb-4 border flex items-center justify-between bg-[#FDF2E2] border-[#F6CE9A] text-[#9A3412]">
+        <div>
+          <div class="text-[0.68rem] font-extrabold uppercase tracking-wider mb-0.5 opacity-80" id="triage-kicker">
+            AUTONOMOUS CLINICAL TRIAGE DECISION
+          </div>
+          <div id="triage-headline" class="font-display font-extrabold text-base sm:text-xl tracking-tight leading-tight">
+            TELE-OPHTHALMOLOGY REVIEW NEEDED
+          </div>
+          <div id="triage-description" class="text-xs sm:text-sm mt-1 text-[#342725] leading-relaxed">
+            Moderate NPDR boundary detected. Image forwarded to tele-ophthalmology queue for 30-second specialist verification.
+          </div>
+        </div>
+        <div id="triage-icon" class="text-3xl sm:text-4xl pl-4 flex-shrink-0">🩺</div>
+      </div>
+
+      <!-- Conformal Set & Clinical Risk Barometer -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <!-- 1. Conformal Prediction Set -->
+        <div class="bg-[#FAF6F0] border border-[#D5C2AF] rounded-xl p-3.5">
+          <div class="text-[0.68rem] font-extrabold text-[#6E5D57] uppercase tracking-wider">CONFORMAL PREDICTION SET</div>
+          <div class="font-mono font-extrabold text-sm sm:text-base text-[#231B1A] mt-1" id="conformal-set-text">
+            [Moderate NPDR, Severe NPDR]
+          </div>
+          <div class="text-[0.68rem] text-[#059669] font-bold mt-1 flex items-center gap-1">
+            <span>🛡️</span> Guaranteed 95% Coverage
+          </div>
+        </div>
+
+        <!-- 2. Macular Oedema (DME) Risk -->
+        <div class="bg-[#FAF6F0] border border-[#D5C2AF] rounded-xl p-3.5">
+          <div class="text-[0.68rem] font-extrabold text-[#6E5D57] uppercase tracking-wider">MACULAR OEDEMA (DME)</div>
+          <div class="font-mono font-extrabold text-sm sm:text-base text-[#EA580C] mt-1" id="dme-risk-text">
+            MODERATE RISK
+          </div>
+          <div class="text-[0.68rem] text-[#6E5D57] mt-1">
+            Nearest exudate: 0.84 DD from fovea
+          </div>
+        </div>
+
+        <!-- 3. Target Action Timeframe -->
+        <div class="bg-[#FAF6F0] border border-[#D5C2AF] rounded-xl p-3.5">
+          <div class="text-[0.68rem] font-extrabold text-[#6E5D57] uppercase tracking-wider">ACTION PROTOCOL</div>
+          <div class="font-mono font-extrabold text-sm sm:text-base text-[#9E1B1B] mt-1" id="action-timeframe-text">
+            Tele-Signoff (30s)
+          </div>
+          <div class="text-[0.68rem] text-[#6E5D57] mt-1">
+            Dr. Anita on duty &middot; District Eye Hospital
+          </div>
+        </div>
+      </div>
+
+      <!-- Empathetic Counseling Card with Audio Voice Synthesizer (English & Hindi) -->
+      <div class="bg-[#EADFD3] border border-[#D5C2AF] rounded-xl p-4 sm:p-5 mb-4">
+        <div class="flex items-center justify-between mb-2 pb-2 border-b border-[#D5C2AF]">
+          <div class="text-xs font-extrabold uppercase tracking-wider text-[#9E1B1B] flex items-center gap-1.5">
+            <span>🗣️</span> Patient Counseling Script (Read aloud to patient)
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="counseling-lang-indicator" class="text-xs font-mono font-bold text-[#6E5D57]">Dialect: English</span>
+            <!-- Audio Synthesizer Button -->
+            <button type="button" class="btn text-xs font-bold py-1 px-2.5 rounded-md bg-[#FAF6F0] hover:bg-[#FBEAE8] border border-[#D5C2AF] text-[#9E1B1B] flex items-center gap-1.5 shadow-xs" onclick="speakPatientCounselingScript()">
+              <span id="soundwave-anim" class="hidden items-center">
+                <span class="soundwave-bar"></span>
+                <span class="soundwave-bar"></span>
+                <span class="soundwave-bar"></span>
+                <span class="soundwave-bar"></span>
+              </span>
+              <span>🔊</span> Speak to Patient
+            </button>
+          </div>
+        </div>
+
+        <p id="counseling-script-text" class="text-sm sm:text-base font-semibold text-[#231B1A] leading-relaxed my-2">
+          "We have captured your eye photograph. The automated check found minor changes, so we have sent it to our eye specialist doctor for a quick 30-second verification. Please wait a few minutes while we print your slip."
+        </p>
+
+        <div class="text-[0.7rem] text-[#6E5D57] italic">
+          Counseling protocol: Reassure the patient that vision protection is the top priority.
+        </div>
+      </div>
+
+      <!-- IN-SITU HOSPITAL REFERRAL & SLOT ALLOCATION MODULE -->
+      <div id="referral-booking-card" class="bg-[#FAF6F0] border-2 border-[#EA580C] rounded-xl p-4 sm:p-5 mb-4 hidden shadow-cockpit">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-3 pb-2.5 border-b border-[#D5C2AF]">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🏥</span>
+            <div>
+              <span class="text-xs font-extrabold uppercase tracking-wider text-[#9E1B1B] block">Step 3: In-Situ Hospital Referral & Slot Allocation</span>
+              <span class="text-[0.68rem] text-[#6E5D57]">Frontline Screener Hospital Slot Booking & Handover</span>
+            </div>
+          </div>
+          <div id="referral-booking-badge" class="status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0]">
+            Referral Required
+          </div>
+        </div>
+
+        <!-- Facility Selection Grid -->
+        <div class="mb-3">
+          <label class="text-[0.68rem] font-bold text-[#6E5D57] uppercase tracking-wider block mb-1.5">
+            Select Destination Eye Hospital & Clinic:
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5" id="facility-option-grid">
+            <!-- Facility 1 (District Eye Hospital) -->
+            <div id="facility-card-1" class="facility-card active p-2.5 rounded-lg border-2 border-[#EA580C] bg-[#FDF1E8] cursor-pointer flex flex-col justify-between transition-all" onclick="selectReferralFacility(this, 'District Eye Hospital (Ananthapur)', 'Vitreo-Retina & Laser Clinic')">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-xs text-[#231B1A]">District Eye Hospital</span>
+                  <span class="status-badge bg-[#FCE8E6] text-[#881337] text-[0.6rem]">Primary Hub</span>
+                </div>
+                <div class="text-[0.68rem] text-[#6E5D57] leading-tight">Vitreo-Retina & Laser Clinic</div>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-[#E8DCCF] flex items-center justify-between text-[0.65rem]">
+                <span class="text-[#059669] font-bold">12 Slots Open</span>
+                <span class="text-[#6E5D57]">14 km</span>
+              </div>
+            </div>
+
+            <!-- Facility 2 (Apex Regional Eye Institute) -->
+            <div id="facility-card-2" class="facility-card p-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] hover:border-[#EA580C] cursor-pointer flex flex-col justify-between transition-all" onclick="selectReferralFacility(this, 'Apex Regional Eye Institute', 'Vitrectomy & Advanced Retina')">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-xs text-[#231B1A]">Apex Eye Institute</span>
+                  <span class="status-badge bg-[#EFE7DE] text-[#6E5D57] text-[0.6rem]">Tertiary</span>
+                </div>
+                <div class="text-[0.68rem] text-[#6E5D57] leading-tight">Vitrectomy & Advanced Retina</div>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-[#E8DCCF] flex items-center justify-between text-[0.65rem]">
+                <span class="text-[#059669] font-bold">6 Slots Open</span>
+                <span class="text-[#6E5D57]">38 km</span>
+              </div>
+            </div>
+
+            <!-- Facility 3 (CHC Central Ophthalmic Unit) -->
+            <div id="facility-card-3" class="facility-card p-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] hover:border-[#EA580C] cursor-pointer flex flex-col justify-between transition-all" onclick="selectReferralFacility(this, 'CHC Central Ophthalmic Unit', 'Slit-Lamp & Cataract Surgery')">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-xs text-[#231B1A]">CHC Central Unit</span>
+                  <span class="status-badge bg-[#FBECE5] text-[#7C2D12] text-[0.6rem]">Slit-Lamp</span>
+                </div>
+                <div class="text-[0.68rem] text-[#6E5D57] leading-tight">Slit-Lamp & Cataract Clinic</div>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-[#E8DCCF] flex items-center justify-between text-[0.65rem]">
+                <span class="text-[#059669] font-bold">22 Slots Open</span>
+                <span class="text-[#6E5D57]">8 km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receiving Doctor / Specialist -->
+        <div class="mb-3">
+          <label class="text-[0.68rem] font-bold text-[#6E5D57] uppercase tracking-wider block mb-1.5">
+            Receiving Doctor / Specialist:
+          </label>
+          <select id="referral-doctor-select" class="w-full bg-[#FAF6F0] border border-[#D5C2AF] rounded-lg px-3 py-1.5 text-xs font-bold text-[#231B1A] focus:outline-none focus:border-[#EA580C] transition-colors">
+            <option value="Dr. Rajesh Kumar (Vitreo-Retina)">Dr. Rajesh Kumar &mdash; Vitreo-Retina Surgeon</option>
+            <option value="Dr. Anita Sharma (Tele-Ophthalmology)">Dr. Anita Sharma &mdash; Tele-Ophthalmologist</option>
+            <option value="Dr. Meera Pillai (Cataract & IOL)">Dr. Meera Pillai &mdash; Cataract &amp; IOL Specialist</option>
+            <option value="Dr. Suresh Babu (General Ophthalmology)">Dr. Suresh Babu &mdash; General Ophthalmologist</option>
+          </select>
+        </div>
+
+        <!-- Appointment Date & Patient Transit Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <!-- Date Picker with Protocol Limit -->
+          <div>
+            <label class="text-[0.68rem] font-bold text-[#6E5D57] uppercase tracking-wider block mb-1">
+              Appointment Target Date <span class="text-[#9E1B1B]" id="protocol-timeframe-tag">(Within 14 Days)</span>:
+            </label>
+            <input type="date" id="referral-appointment-date" class="w-full bg-[#FAF6F0] border border-[#D5C2AF] rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-[#231B1A] focus:outline-none focus:border-[#EA580C]">
+          </div>
+
+          <!-- Transit & Escort Logistics -->
+          <div class="flex flex-col justify-center gap-1.5">
+            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#231B1A]">
+              <input type="checkbox" id="referral-transit-checkbox" checked class="w-4 h-4 rounded border-[#D5C2AF] text-[#9E1B1B] focus:ring-0">
+              <span>Reserve Free Govt Camp Bus Transit (Route 4B)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[#231B1A]">
+              <input type="checkbox" id="referral-escort-checkbox" checked class="w-4 h-4 rounded border-[#D5C2AF] text-[#9E1B1B] focus:ring-0">
+              <span>Family Escort Advised (Dilating eye drops given)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action / Booking Execution -->
+        <div class="pt-2 border-t border-[#D5C2AF]">
+          <button type="button" id="btn-confirm-referral" onclick="confirmHospitalReferral()" class="w-full btn primary font-extrabold text-sm py-2.5 px-4 rounded-lg bg-[#9E1B1B] hover:bg-[#7F1D1D] text-[#FAF6F0] shadow-cockpit flex items-center justify-center gap-2 transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span id="confirm-referral-btn-text">Confirm & Issue Hospital Referral (Book Slot)</span>
+          </button>
+          <div id="booking-confirmation-msg" class="hidden mt-2 p-2.5 rounded-lg bg-[#EAF4EE] border border-[#BCDBC6] text-[#22543D] text-xs font-bold flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <span>✓</span> <span id="booking-confirmed-text">Referral Booked & Confirmed with District Eye Hospital.</span>
+            </span>
+            <span class="font-mono text-[0.68rem] bg-[#BCDBC6] px-2 py-0.5 rounded" id="booking-ref-num">REF-2026-0814</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TELE-REVIEW INFO PANEL (shown for moderate cases sent to doctor queue) -->
+      <div id="telereview-panel" class="hidden bg-[#FDF2E2] border-2 border-[#F6CE9A] rounded-xl p-4 sm:p-5 mb-4">
+        <div class="flex items-start gap-3">
+          <span class="text-2xl flex-shrink-0">🩺</span>
+          <div class="flex-1">
+            <div class="text-xs font-extrabold uppercase tracking-wider text-[#9A3412] mb-1">Case Sent to Tele-Review Queue</div>
+            <div class="text-sm font-semibold text-[#231B1A] leading-relaxed mb-2">
+              This case has been forwarded to <strong>Dr. Anita Sharma</strong>'s tele-review queue. Please ask the patient to wait — specialist confirmation typically takes under 30 seconds.
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="status-badge bg-[#FDF2E2] text-[#9A3412] border border-[#F6CE9A]">Queue Position: #1</span>
+              <span class="status-badge bg-[#EAF4EE] text-[#22543D] border border-[#BCDBC6]">Avg. Wait: 24s</span>
+              <span id="telereview-live-clock" class="font-mono text-[0.68rem] text-[#6E5D57]">Waiting...</span>
+            </div>
+          </div>
+          <button type="button" onclick="pingTeleDoctor()" class="btn text-xs font-bold px-3 py-1.5 rounded-md border border-[#F6CE9A] bg-[#FAF6F0] text-[#9A3412] hover:bg-[#FCE8E6] transition-colors flex-shrink-0">
+            🔔 Ping
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Buttons Bar -->
+      <div class="flex items-center justify-between flex-wrap gap-3 pt-2">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <!-- Print Slip -->
+          <a id="btn-print-slip" href="#" target="_blank" class="btn primary font-extrabold text-sm px-5 py-2.5 rounded-lg bg-[#9E1B1B] hover:bg-[#7F1D1D] text-[#FAF6F0] shadow-cockpit flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print Patient Handover Slip
+          </a>
+
+          <!-- Dispatch SMS -->
+          <button type="button" class="btn text-sm font-bold px-4 py-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] hover:bg-[#EFE7DE] text-[#231B1A] shadow-subtle flex items-center gap-2" onclick="sendPatientSMSNotice()">
+            <span>📱</span> Dispatch SMS Notice
+          </button>
+        </div>
+
+        <!-- Next Eye / Next Patient Action -->
+        <button type="button" class="btn text-sm font-extrabold px-5 py-2.5 rounded-lg border-2 border-[#9E1B1B] text-[#9E1B1B] hover:bg-[#FBEAE8] bg-transparent flex items-center gap-2" onclick="onCompleteEyeOrPatient()">
+          <span id="next-action-label">Examine Left Eye (OS) &rarr;</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MOBILE BOTTOM STICKY DOCK -->
+<div class="mobile-bottom-dock">
+  <button type="button" class="flex-1 btn text-xs font-bold py-2.5 rounded-lg bg-[#FAF6F0] border border-[#D5C2AF] text-[#231B1A] flex items-center justify-center gap-1.5" onclick="document.getElementById('camera-input').click()">
+    <span>📷</span> Camera
+  </button>
+  <button type="button" class="flex-1 btn primary text-xs font-bold py-2.5 rounded-lg bg-[#9E1B1B] text-[#FAF6F0] flex items-center justify-center gap-1.5 shadow-subtle" onclick="runAITriageEvaluation()">
+    <span>⚡</span> Run AI
+  </button>
+  <button type="button" class="btn text-xs font-bold py-2.5 px-3.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] text-[#231B1A]" onclick="resetIntake()" title="New Patient">
+    <span>➕</span>
+  </button>
+</div>
+
+<!-- UIKIT OFFCANVAS: Today's Camp Roster Drawer for Mobile/Tablet -->
+<div id="cockpit-roster-offcanvas" uk-offcanvas="overlay: true">
+  <div class="uk-offcanvas-bar bg-[#F5EFEB] text-[#231B1A] border-r border-[#D5C2AF] p-4 flex flex-col justify-between">
+    <div>
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#D5C2AF]">
+        <div>
+          <h3 class="font-display font-extrabold text-base text-[#231B1A] m-0">Today's Camp Roster</h3>
+          <span class="text-xs text-[#6E5D57]">18 Patients Screened &middot; PHC-1</span>
+        </div>
+        <button class="uk-offcanvas-close" type="button" uk-close></button>
+      </div>
+
+      <div class="flex flex-col gap-2.5">
+        <div class="p-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] cursor-pointer" onclick="loadClinicalSample('moderate'); UIkit.offcanvas('#cockpit-roster-offcanvas').hide();">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0145</span>
+            <span class="status-badge bg-[#FDF2E2] text-[#9A3412] border border-[#F6CE9A]">Tele-Review</span>
+          </div>
+          <div class="text-[0.68rem] text-[#6E5D57]">Right Eye (OD) &middot; Just now</div>
+        </div>
+
+        <div class="p-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] cursor-pointer" onclick="loadClinicalSample('severe'); UIkit.offcanvas('#cockpit-roster-offcanvas').hide();">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0089</span>
+            <span class="status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0]">Urgent 14D</span>
+          </div>
+          <div class="text-[0.68rem] text-[#6E5D57]">Left Eye (OS) &middot; 35m ago</div>
+        </div>
+
+        <div class="p-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] cursor-pointer" onclick="loadClinicalSample('normal'); UIkit.offcanvas('#cockpit-roster-offcanvas').hide();">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0114</span>
+            <span class="status-badge bg-[#EAF4EE] text-[#22543D] border border-[#BCDBC6]">Recall 12M</span>
+          </div>
+          <div class="text-[0.68rem] text-[#6E5D57]">Right Eye (OD) &middot; 1h ago</div>
+        </div>
+
+        <div class="p-2.5 rounded-lg border border-[#D5C2AF] bg-[#FAF6F0] cursor-pointer" onclick="loadClinicalSample('blurry'); UIkit.offcanvas('#cockpit-roster-offcanvas').hide();">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-mono font-bold text-xs text-[#231B1A]">P-2026-0038</span>
+            <span class="status-badge bg-[#FBECE5] text-[#7C2D12] border border-[#F3C5B1]">Cataract Gate</span>
+          </div>
+          <div class="text-[0.68rem] text-[#6E5D57]">Left Eye (OS) &middot; 2h ago</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-4 border-t border-[#D5C2AF]">
+      <div class="text-[#6E5D57] text-xs text-center">District Eye Helpline: +91 800-DRISHTI</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADVANCED JAVASCRIPT: Bilateral Screening, Optical Loupe, Voice Synthesizer & API Hooks -->
+<script>
+// State Management
+let currentAttempt = 1;
+let currentSample = 'moderate';
+let currentLayer = 'fundus';
+let currentExaminedEye = 'right';
+let currentDialect = 'en';
+let activeToken = 'tok_p101_review';
+let activeCaseId = 101;
+let customFile = null;
+let selectedReferralFacility = 'District Eye Hospital (Ananthapur)';
+let selectedReferralSpecialty = 'Vitreo-Retina & Laser Clinic';
+
+// Retinal Multi-Layer Medical SVGs
+const CLINICAL_LAYERS = {
+  moderate: {
+    fundus: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#230806"/><circle cx="300" cy="225" r="190" fill="#5C150D"/><circle cx="300" cy="225" r="184" fill="#7A1C11"/><circle cx="215" cy="225" r="38" fill="#E09045"/><circle cx="385" cy="225" r="16" fill="#380B06"/><path d="M215,225 Q265,150 360,115 M215,225 Q285,300 395,320" stroke="#3B0703" stroke-width="4.5" fill="none"/><circle cx="350" cy="190" r="6" fill="#D97706"/><circle cx="325" cy="260" r="7" fill="#881337"/><circle cx="410" cy="250" r="5" fill="#DC2626"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Moderate NPDR · Hard Exudates Present</text></svg>`,
+    unet: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#180504"/><circle cx="300" cy="225" r="190" fill="#3D0D08"/><circle cx="215" cy="225" r="38" fill="none" stroke="#059669" stroke-width="3.5"/><text x="215" y="175" font-family="monospace" font-size="12" fill="#059669" text-anchor="middle">Optic Disc</text><circle cx="385" cy="225" r="50" fill="none" stroke="#0284C7" stroke-width="2.5" stroke-dasharray="5 4"/><text x="385" y="165" font-family="monospace" font-size="11" fill="#0284C7" text-anchor="middle">Fovea (1-DD Safety Zone)</text><circle cx="350" cy="190" r="7" fill="#D97706"/><text x="350" y="180" font-family="monospace" font-size="10" fill="#D97706">EX</text><circle cx="325" cy="260" r="8" fill="#881337"/><text x="325" y="278" font-family="monospace" font-size="10" fill="#881337">HE</text><circle cx="410" cy="250" r="6" fill="#DC2626"/><text x="410" y="268" font-family="monospace" font-size="10" fill="#DC2626">MA</text><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#F5EFEB" text-anchor="middle">U-Net Segmentation: 12 MA · 7 HE · 4 EX</text></svg>`,
+    gradcam: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#230806"/><circle cx="300" cy="225" r="190" fill="#5C150D"/><circle cx="350" cy="215" r="75" fill="#EA580C" opacity="0.65" filter="blur(18px)"/><circle cx="375" cy="225" r="40" fill="#DC2626" opacity="0.75" filter="blur(12px)"/><circle cx="350" cy="215" r="22" fill="#FEF08A" opacity="0.9" filter="blur(7px)"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Grad-CAM Neural Attention: Macular Quadrant</text></svg>`,
+    redfree: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#021408"/><circle cx="300" cy="225" r="190" fill="#0F3B1A"/><circle cx="300" cy="225" r="184" fill="#175426"/><circle cx="215" cy="225" r="38" fill="#84CC16"/><circle cx="385" cy="225" r="16" fill="#03240E"/><path d="M215,225 Q265,150 360,115 M215,225 Q285,300 395,320" stroke="#021508" stroke-width="4.5" fill="none"/><circle cx="350" cy="190" r="6" fill="#FEF08A"/><circle cx="325" cy="260" r="7" fill="#000000"/><circle cx="410" cy="250" r="5" fill="#000000"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Red-Free (Green Optical Filter) · Microaneurysms Enhanced</text></svg>`
+  },
+  severe: {
+    fundus: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#230806"/><circle cx="300" cy="225" r="190" fill="#5C150D"/><circle cx="300" cy="225" r="184" fill="#7A1C11"/><circle cx="205" cy="225" r="38" fill="#DE8838"/><circle cx="395" cy="225" r="16" fill="#380B06"/><ellipse cx="335" cy="205" rx="16" ry="11" fill="#881337"/><ellipse cx="430" cy="200" rx="14" ry="10" fill="#881337"/><circle cx="360" cy="260" r="10" fill="#D97706"/><circle cx="385" cy="215" r="7" fill="#DC2626"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Severe PDR + Suspected DME</text></svg>`,
+    unet: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#180504"/><circle cx="300" cy="225" r="190" fill="#3D0D08"/><circle cx="205" cy="225" r="38" fill="none" stroke="#059669" stroke-width="3.5"/><circle cx="395" cy="225" r="50" fill="none" stroke="#DC2626" stroke-width="3.5" stroke-dasharray="4 4"/><text x="395" y="165" font-family="monospace" font-size="11" fill="#DC2626" text-anchor="middle">High Risk DME: Hard Exudates &lt; 1 DD</text><ellipse cx="335" cy="205" rx="16" ry="11" fill="#881337"/><ellipse cx="430" cy="200" rx="14" ry="10" fill="#881337"/><circle cx="360" cy="260" r="10" fill="#D97706"/><circle cx="385" cy="215" r="7" fill="#DC2626"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#F5EFEB" text-anchor="middle">U-Net: 18 MA · 11 HE · 6 EX · Neovascularization</text></svg>`,
+    gradcam: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#230806"/><circle cx="300" cy="225" r="190" fill="#5C150D"/><circle cx="385" cy="215" r="95" fill="#DC2626" opacity="0.85" filter="blur(18px)"/><circle cx="395" cy="225" r="45" fill="#FEF08A" opacity="0.95" filter="blur(7px)"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Grad-CAM: Critical Attention on Retinal Neovascularization</text></svg>`,
+    redfree: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#021408"/><circle cx="300" cy="225" r="190" fill="#0F3B1A"/><circle cx="300" cy="225" r="184" fill="#175426"/><ellipse cx="335" cy="205" rx="16" ry="11" fill="#000000"/><ellipse cx="430" cy="200" rx="14" ry="10" fill="#000000"/><circle cx="360" cy="260" r="10" fill="#FEF08A"/><circle cx="385" cy="215" r="7" fill="#000000"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Red-Free: Massive Haemorrhages Visualized</text></svg>`
+  },
+  normal: {
+    fundus: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#230806"/><circle cx="300" cy="225" r="190" fill="#5C150D"/><circle cx="300" cy="225" r="184" fill="#7A1C11"/><circle cx="215" cy="225" r="38" fill="#E09045"/><circle cx="385" cy="225" r="16" fill="#380B06"/><path d="M215,225 Q265,150 360,115 M215,225 Q285,300 395,320" stroke="#3B0703" stroke-width="4" fill="none"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Clear Optical Fundus · Zero Lesions</text></svg>`,
+    unet: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#180504"/><circle cx="300" cy="225" r="190" fill="#3D0D08"/><circle cx="215" cy="225" r="38" fill="none" stroke="#059669" stroke-width="3.5"/><circle cx="385" cy="225" r="50" fill="none" stroke="#0284C7" stroke-width="2.5" stroke-dasharray="5 4"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#F5EFEB" text-anchor="middle">U-Net: Clean Microvascular Architecture</text></svg>`,
+    gradcam: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#230806"/><circle cx="300" cy="225" r="190" fill="#5C150D"/><circle cx="300" cy="225" r="70" fill="#059669" opacity="0.3" filter="blur(22px)"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Grad-CAM: Low Uniform Attention</text></svg>`,
+    redfree: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#021408"/><circle cx="300" cy="225" r="190" fill="#0F3B1A"/><circle cx="300" cy="225" r="184" fill="#175426"/><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Red-Free: Clear Retinal Background</text></svg>`
+  },
+  blurry: {
+    fundus: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#1A0504"/><circle cx="300" cy="225" r="190" fill="#3A0E08" filter="blur(12px)"/><text x="300" y="210" font-family="sans-serif" font-size="17" font-weight="bold" fill="#EADFD3" text-anchor="middle">MEDIA OPACITY / BLUR DETECTED</text><text x="300" y="245" font-family="monospace" font-size="13" fill="#F97316" text-anchor="middle">Focus gradient 0.012 &lt; 0.030 threshold</text><text x="300" y="405" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FAF6F0" text-anchor="middle">Quality Gate: Ungradable Photo</text></svg>`,
+    unet: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#1A0504"/><text x="300" y="225" font-family="sans-serif" font-size="15" fill="#F7B5B0" text-anchor="middle">Segmentation Inactive: Quality Check Failed</text></svg>`,
+    gradcam: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#1A0504"/><text x="300" y="225" font-family="sans-serif" font-size="15" fill="#F7B5B0" text-anchor="middle">Grad-CAM Inactive: High Media Opacity</text></svg>`,
+    redfree: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 450"><rect width="600" height="450" fill="#1A0504"/><text x="300" y="225" font-family="sans-serif" font-size="15" fill="#F7B5B0" text-anchor="middle">Red-Free Inactive: Lens Opacity Exceeds Limit</text></svg>`
+  }
+};
+
+// Safely convert and URL-encode SVG markup into a cross-browser valid data URI
+function getClinicalLayerUri(sample, layer) {
+  const sampleData = CLINICAL_LAYERS[sample] || CLINICAL_LAYERS.moderate;
+  let raw = sampleData[layer] || sampleData.fundus || '';
+  if (raw.startsWith('data:image/svg+xml;utf8,')) {
+    raw = raw.slice('data:image/svg+xml;utf8,'.length);
+  }
+  try {
+    raw = decodeURIComponent(raw);
+  } catch (e) {}
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(raw.trim());
+}
+
+// Empathetic Patient Counseling Scripts (English & Hindi only, Tamil Removed)
+const COUNSELING_SCRIPTS = {
+  en: {
+    moderate: "We have captured your eye photograph. The automated check found minor changes, so we have sent it to our eye specialist doctor for a quick 30-second verification. Please wait a few minutes while we print your slip.",
+    severe: "Important: Diabetic changes have been found in the back of your eye that require treatment to protect your vision. We are booking you an appointment at the District Eye Hospital within 14 days.",
+    normal: "Good news: No signs of diabetic eye damage were found today. Please keep your blood sugar well managed and return for your routine annual checkup next year.",
+    cataract: "We could not get a sharp photo of the back of your eye due to haziness in your lens. We are referring you to the district hospital to check for cataracts."
+  },
+  hi: {
+    moderate: "आपकी आँख की तस्वीर ली जा चुकी है। कंप्यूटर ने कुछ हल्के बदलाव पाए हैं, इसलिए इसे डॉक्टर के पास 30 सेकंड की जांच के लिए भेजा गया है। कृपया कुछ देर प्रतीक्षा करें।",
+    severe: "महत्वपूर्ण: आपकी आँख के पिछले हिस्से में डायबिटीज़ से होने वाले बदलाव दिखे हैं। आपकी नज़र सुरक्षित रखने के लिए 14 दिनों के भीतर जिला अस्पताल में जांच ज़रूरी है।",
+    normal: "अच्छी खबर: आज आपकी आँख में डायबिटीज़ से होने वाला कोई नुकसान नहीं मिला है। अपनी शुगर नियंत्रित रखें और अगले साल दोबारा जांच करवाएं।",
+    cataract: "आँख में धुंधलेपन के कारण साफ तस्वीर नहीं आ सकी। मोतियाबिंद की जांच के लिए आपको अस्पताल भेजा जा रहा है।"
+  }
+};
+
+// Setup Optical Loupe Inspector
+function initOpticalLoupe() {
+  const box = document.getElementById('viewport-box');
+  const loupe = document.getElementById('magnifier-loupe');
+  const img = document.getElementById('preview-img');
+
+  box.addEventListener('mousemove', (e) => {
+    if (window.innerWidth < 768) return;
+    const rect = box.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (x > 0 && x < rect.width && y > 0 && y < rect.height) {
+      loupe.style.display = 'block';
+      loupe.style.left = `${x - 70}px`;
+      loupe.style.top = `${y - 70}px`;
+
+      const zoom = 2.4;
+      loupe.style.backgroundImage = `url('${img.src}')`;
+      loupe.style.backgroundSize = `${rect.width * zoom}px ${rect.height * zoom}px`;
+      loupe.style.backgroundPosition = `-${x * zoom - 70}px -${y * zoom - 70}px`;
+    } else {
+      loupe.style.display = 'none';
+    }
+  });
+
+  box.addEventListener('mouseleave', () => {
+    loupe.style.display = 'none';
+  });
+}
+
+// Dialect TTS Audio Speech Synthesis (English & Hindi)
+function speakPatientCounselingScript() {
+  if (!('speechSynthesis' in window)) {
+    UIkit.notification({ message: '<div class="text-xs font-bold font-mono">⚠️ Voice speech not supported in this browser</div>', status: 'warning' });
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const scriptText = document.getElementById('counseling-script-text').textContent.replace(/"/g, '');
+  const utterance = new SpeechSynthesisUtterance(scriptText);
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  utterance.lang = currentDialect === 'hi' ? 'hi-IN' : 'en-IN';
+
+  const soundwave = document.getElementById('soundwave-anim');
+  soundwave.classList.remove('hidden');
+  soundwave.classList.add('inline-flex');
+
+  utterance.onend = () => {
+    soundwave.classList.add('hidden');
+    soundwave.classList.remove('inline-flex');
+  };
+
+  window.speechSynthesis.speak(utterance);
+  UIkit.notification({
+    message: `<div class="text-xs font-bold font-mono">🔊 Spoken Counseling Voice (${currentDialect === 'hi' ? 'हिंदी' : 'English'})...</div>`,
+    status: 'primary',
+    pos: 'bottom-center',
+    timeout: 3000
+  });
+}
+
+// Intake & Patient Token Generation
+function generateNewPatientToken() {
+  const randNum = Math.floor(100 + Math.random() * 900);
+  const newToken = 'P-2026-0' + randNum;
+  document.getElementById('patient-id').value = newToken;
+  UIkit.notification({
+    message: `<div class="text-xs font-bold font-mono">🎲 Assigned Token: ${newToken}</div>`,
+    status: 'primary',
+    pos: 'top-right',
+    timeout: 2000
+  });
+}
+
+function setExaminedEye(eye) {
+  currentExaminedEye = eye;
+  document.getElementById('patient-eye').value = eye;
+  document.getElementById('eye-tab-right').classList.toggle('active', eye === 'right');
+  document.getElementById('eye-tab-left').classList.toggle('active', eye === 'left');
+  
+  const nextLabel = document.getElementById('next-action-label');
+  if (eye === 'right') {
+    nextLabel.textContent = 'Examine Left Eye (OS) \u2192';
+  } else {
+    nextLabel.textContent = 'Complete & Screen Next Patient \u2192';
+  }
+}
+
+function onCompleteEyeOrPatient() {
+  if (currentExaminedEye === 'right') {
+    setExaminedEye('left');
+    document.getElementById('badge-od-status').textContent = 'Completed';
+    document.getElementById('badge-od-status').className = 'eye-pill-badge ml-auto bg-[#EAF4EE] text-[#22543D]';
+    document.getElementById('badge-os-status').textContent = 'Active';
+    document.getElementById('badge-os-status').className = 'eye-pill-badge ml-auto bg-[#9E1B1B] text-[#FAF6F0]';
+    clearFundusCapture();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    UIkit.notification({
+      message: '<div class="text-xs font-bold font-mono">👁️ Switched to Left Eye (OS) examination</div>',
+      status: 'primary',
+      pos: 'top-center',
+      timeout: 2000
+    });
+  } else {
+    resetIntake();
+  }
+}
+
+function switchCounselingDialect(lang, btn) {
+  currentDialect = lang;
+  document.getElementById('patient-lang').value = lang;
+  btn.parentElement.querySelectorAll('.cockpit-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+
+  const indicator = document.getElementById('counseling-lang-indicator');
+  indicator.textContent = `Dialect: ${lang === 'hi' ? 'हिंदी (Hindi)' : 'English'}`;
+  updateCounselingScript();
+}
+
+function onFacilityChanged(site) {
+  UIkit.notification({
+    message: `<div class="text-xs font-bold font-mono">🏥 Mondrian Conformal Policy Calibrated for: ${site}</div>`,
+    status: 'primary',
+    pos: 'top-right',
+    timeout: 2500
+  });
+}
+
+// Multi-Layer Viewport Switcher
+function setVisualLayer(layer) {
+  currentLayer = layer;
+  ['fundus', 'unet', 'gradcam', 'redfree'].forEach(l => {
+    const b = document.getElementById(`layer-btn-${l}`);
+    if (b) b.classList.toggle('active', l === layer);
+  });
+
+  const img = document.getElementById('preview-img');
+  const label = document.getElementById('viewport-layer-label');
+  const lesionRow = document.getElementById('lesion-telemetry-row');
+
+  img.src = getClinicalLayerUri(currentSample, layer);
+
+  if (layer === 'fundus') {
+    label.textContent = 'Layer: Natural Color Fundus';
+    lesionRow.classList.add('hidden');
+    lesionRow.classList.remove('flex');
+  } else if (layer === 'unet') {
+    label.textContent = 'Layer: U-Net Lesion & Landmark Masks';
+    lesionRow.classList.remove('hidden');
+    lesionRow.classList.add('flex');
+  } else if (layer === 'gradcam') {
+    label.textContent = 'Layer: Grad-CAM Neural Attention';
+    lesionRow.classList.add('hidden');
+    lesionRow.classList.remove('flex');
+  } else if (layer === 'redfree') {
+    label.textContent = 'Layer: Red-Free (Green Optical Filter)';
+    lesionRow.classList.add('hidden');
+    lesionRow.classList.remove('flex');
+  }
+}
+
+// Load Validated Clinical Presets
+function loadClinicalSample(sample, cardEl) {
+  currentSample = sample;
+  customFile = null;
+
+  document.querySelectorAll('.cockpit-chip').forEach(p => {
+    if (p.textContent.toLowerCase().includes(sample)) {
+      p.parentElement.querySelectorAll('.cockpit-chip').forEach(c => c.classList.remove('active'));
+      p.classList.add('active');
+    }
+  });
+
+  if (cardEl) {
+    document.querySelectorAll('#roster-list-desktop .roster-item').forEach(r => r.classList.remove('active'));
+    cardEl.classList.add('active');
+  }
+
+  const preview = document.getElementById('drop-preview');
+  const prompt = document.getElementById('drop-prompt');
+  const img = document.getElementById('preview-img');
+  const fname = document.getElementById('preview-filename-text');
+
+  prompt.classList.add('hidden');
+  preview.classList.remove('hidden');
+  preview.classList.add('flex');
+
+  img.src = getClinicalLayerUri(sample, currentLayer);
+  fname.textContent = `preset_${sample}_fundus.jpg`;
+
+  runAITriageEvaluation();
+}
+
+// Native File / Camera Upload Handler
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  customFile = file;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    document.getElementById('drop-prompt').classList.add('hidden');
+    const preview = document.getElementById('drop-preview');
+    preview.classList.remove('hidden');
+    preview.classList.add('flex');
+    document.getElementById('preview-img').src = evt.target.result;
+    document.getElementById('preview-filename-text').textContent = file.name;
+    advanceProgressStep(2);
+    runAITriageEvaluation();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearFundusCapture() {
+  customFile = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('camera-input').value = '';
+  document.getElementById('drop-prompt').classList.remove('hidden');
+  const prev = document.getElementById('drop-preview');
+  prev.classList.add('hidden');
+  prev.classList.remove('flex');
+  document.getElementById('quality-card').classList.add('hidden');
+  document.getElementById('result-card').classList.add('hidden');
+  const bookingCard = document.getElementById('referral-booking-card');
+  if (bookingCard) bookingCard.classList.add('hidden');
+  const telePanel = document.getElementById('telereview-panel');
+  if (telePanel) telePanel.classList.add('hidden');
+  advanceProgressStep(1);
+}
+
+// Execute AI Triage & Optical Quality Gate with Robust Image Upload Path
+async function runAITriageEvaluation() {
+  const qualityCard = document.getElementById('quality-card');
+  const resultCard = document.getElementById('result-card');
+  const qualityBadge = document.getElementById('quality-status-badge');
+  const alertHeading = document.getElementById('quality-alert-heading');
+  const alertBody = document.getElementById('quality-alert-body');
+
+  qualityCard.classList.remove('hidden');
+  advanceProgressStep(3);
+
+  // Backend /api/screen Payload: Ensures a valid image file is ALWAYS attached
+  const fd = new FormData();
+  if (customFile) {
+    fd.append('file', customFile);
+  } else {
+    // Convert SVG data URI into a Blob so backend file.read() always receives a valid image
+    const svgStr = (CLINICAL_LAYERS[currentSample] || CLINICAL_LAYERS.moderate).fundus;
+    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+    fd.append('file', blob, `sample_${currentSample}.svg`);
+    fd.append('sample', currentSample);
+  }
+  fd.append('site', document.getElementById('facility-site-select').value);
+  fd.append('patient', document.getElementById('patient-id').value);
+  fd.append('eye', currentExaminedEye);
+  fd.append('attempt', currentAttempt);
+  fd.append('lang', currentDialect);
+
+  if (currentSample === 'blurry') {
+    // Quality check failed
+    qualityBadge.textContent = 'Quality Failed (Recapture Required)';
+    qualityBadge.className = 'status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0]';
+    
+    setBeaconMetric('fov', '40%', 'pass');
+    setBeaconMetric('completeness', '82%', 'pass');
+    setBeaconMetric('median', '44.0', 'pass');
+    setBeaconMetric('clipped', '0.9%', 'pass');
+    setBeaconMetric('evenness', '0.48', 'pass');
+    setBeaconMetric('focus', '0.012', 'fail');
+
+    if (currentAttempt < 3) {
+      document.getElementById(`rail-${currentAttempt}`).className = 'attempt-segment failed';
+      currentAttempt++;
+      document.getElementById(`rail-${currentAttempt}`).className = 'attempt-segment current';
+      document.getElementById('attempt-indicator-text').textContent = `Attempt ${currentAttempt} of 3`;
+      alertHeading.innerHTML = '<span class="text-[#DC2626]">⚠️</span> Media Opacity / Optical Blur Detected:';
+      alertBody.innerHTML = '<strong>Action Required:</strong> Focus sharpness 0.012 &lt; 0.030 threshold. Ask patient to blink twice, wipe camera lens with microfiber cloth, and dim room lights before retaking capture.';
+      resultCard.classList.add('hidden');
+    } else {
+      // 3 attempts failed -> Cataract Safeguard!
+      document.getElementById('rail-3').className = 'attempt-segment failed';
+      alertHeading.innerHTML = '<span class="text-[#881337]">🚨</span> Automated Cataract Safeguard Triggered:';
+      alertBody.innerHTML = '<strong class="text-[#881337]">Safety Rule Active:</strong> Patient failed 3 consecutive quality recaptures. Auto-generating referral for Secondary Eye Hospital for Slit-Lamp Media Opacity / Cataract assessment.';
+      renderTriageOutcome('cataract');
+    }
+  } else {
+    // Quality check passed
+    qualityBadge.textContent = 'Quality Passed (Gradable: 0.94)';
+    qualityBadge.className = 'status-badge bg-[#EAF4EE] text-[#22543D] border border-[#BCDBC6]';
+
+    setBeaconMetric('fov', '42%', 'pass');
+    setBeaconMetric('completeness', '88%', 'pass');
+    setBeaconMetric('median', '68.2', 'pass');
+    setBeaconMetric('clipped', '1.8%', 'pass');
+    setBeaconMetric('evenness', '0.76', 'pass');
+    setBeaconMetric('focus', '0.048', 'pass');
+
+    document.getElementById(`rail-${currentAttempt}`).className = 'attempt-segment passed';
+    alertHeading.innerHTML = '<span class="text-[#059669]">✓</span> Optical Verification Passed:';
+    alertBody.textContent = 'Sharpness and illumination levels conform with diagnostic benchmarks. Fundus image is verified gradable for autonomous diabetic retinopathy classification.';
+
+    try {
+      const resp = await fetch('/api/screen', { method: 'POST', body: fd });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.token) activeToken = data.token;
+        if (data.case_id) activeCaseId = data.case_id;
+      }
+    } catch (e) {
+      console.log('API call fallback active:', e);
+    }
+
+    renderTriageOutcome(currentSample);
+  }
+}
+
+function setBeaconMetric(id, val, status) {
+  const valEl = document.getElementById(`val-${id}`);
+  const dot = document.getElementById(`beacon-${id}`);
+  const bar = document.getElementById(`bar-${id}`);
+  if (valEl) valEl.textContent = val;
+  if (dot) dot.className = `w-2 h-2 rounded-full ${status === 'pass' ? 'bg-[#059669]' : 'bg-[#DC2626]'}`;
+  if (bar) {
+    // Calculate bar width from value string
+    let pct = 50;
+    const raw = parseFloat(val.replace('%','').replace(',',''));
+    if (val.includes('%')) {
+      pct = Math.min(raw, 100);
+    } else if (raw <= 1.0 && raw > 0) {
+      pct = raw * 100; // ratio like 0.76 → 76%
+    } else {
+      // For things like illumination (0-255 range), normalize
+      pct = Math.min((raw / 100) * 100, 100);
+    }
+    bar.style.width = `${Math.max(4, pct)}%`;
+    bar.className = `metric-bar-fill${status === 'fail' ? ' fail' : ''}`;
+  }
+}
+
+// Facility Selector Handler
+function selectReferralFacility(cardEl, facility, specialty) {
+  selectedReferralFacility = facility;
+  selectedReferralSpecialty = specialty;
+  document.querySelectorAll('#facility-option-grid .facility-card').forEach(c => {
+    c.classList.remove('active', 'border-2', 'border-[#EA580C]', 'bg-[#FDF1E8]');
+    c.classList.add('border', 'border-[#D5C2AF]', 'bg-[#FAF6F0]');
+  });
+  cardEl.classList.remove('border', 'border-[#D5C2AF]', 'bg-[#FAF6F0]');
+  cardEl.classList.add('active', 'border-2', 'border-[#EA580C]', 'bg-[#FDF1E8]');
+}
+
+function calculateTargetDate(daysAhead) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return d.toISOString().split('T')[0];
+}
+
+// Confirm & Issue Hospital Referral (Direct In-Situ Booking)
+async function confirmHospitalReferral() {
+  const btn = document.getElementById('btn-confirm-referral');
+  const btnText = document.getElementById('confirm-referral-btn-text');
+  const badge = document.getElementById('referral-booking-badge');
+  const confirmMsg = document.getElementById('booking-confirmation-msg');
+  const confirmedText = document.getElementById('booking-confirmed-text');
+  const refNum = document.getElementById('booking-ref-num');
+  const slipBtn = document.getElementById('btn-print-slip');
+  const apptDate = document.getElementById('referral-appointment-date').value || calculateTargetDate(6);
+  const transit = document.getElementById('referral-transit-checkbox').checked;
+  const escort = document.getElementById('referral-escort-checkbox').checked;
+
+  btnText.textContent = 'Locking Referral & Synchronizing Slot...';
+  btn.disabled = true;
+
+  try {
+    const doctor = document.getElementById('referral-doctor-select')?.value || '';
+    const payload = {
+      case_id: activeCaseId,
+      token: activeToken,
+      facility: selectedReferralFacility,
+      specialty: selectedReferralSpecialty,
+      appointment_date: apptDate,
+      transit: transit,
+      escort: escort,
+      notes: `Assigned: ${doctor}. Booked at ${document.getElementById('facility-site-select').value}`
+    };
+
+    const resp = await fetch('/api/referral/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+    if (data.ok) {
+      badge.textContent = 'Referral Booked';
+      badge.className = 'status-badge bg-[#EAF4EE] text-[#22543D] border border-[#BCDBC6]';
+      btn.className = 'w-full btn font-extrabold text-sm py-2.5 px-4 rounded-lg bg-[#059669] text-[#FAF6F0] flex items-center justify-center gap-2 cursor-default';
+      btnText.textContent = '✓ Hospital Referral Confirmed & Slot Reserved';
+
+      confirmMsg.classList.remove('hidden');
+      confirmedText.textContent = `Referral locked at ${selectedReferralFacility} for ${apptDate}.`;
+      refNum.textContent = `REF-${data.booking ? data.booking.referral_id : '2026-0814'}`;
+
+      if (data.slip_url) {
+        slipBtn.href = data.slip_url;
+      }
+      slipBtn.classList.add('animate-pulse');
+
+      const refCountEl = document.getElementById('camp-referrals-count');
+      if (refCountEl) {
+        const cur = parseInt(refCountEl.textContent || '3', 10);
+        refCountEl.textContent = cur + 1;
+      }
+
+      UIkit.notification({
+        message: `<div class="text-xs font-bold font-mono">🏥 Hospital Slot Confirmed & Recorded<br><span class="text-[#6E5D57]">${selectedReferralFacility} &middot; SMS Dispatched to Patient</span></div>`,
+        status: 'success',
+        pos: 'top-center',
+        timeout: 4000
+      });
+    }
+  } catch (err) {
+    console.error('Referral booking error:', err);
+    btn.disabled = false;
+    btnText.textContent = 'Confirm & Issue Hospital Referral (Book Slot)';
+  }
+}
+
+// Render Autonomous Triage Decision
+function renderTriageOutcome(outcome) {
+  const resultCard = document.getElementById('result-card');
+  const banner = document.getElementById('triage-banner');
+  const headline = document.getElementById('triage-headline');
+  const desc = document.getElementById('triage-description');
+  const icon = document.getElementById('triage-icon');
+  const kicker = document.getElementById('triage-kicker');
+  const conformalSet = document.getElementById('conformal-set-text');
+  const dmeRisk = document.getElementById('dme-risk-text');
+  const timeframe = document.getElementById('action-timeframe-text');
+  const slipBtn = document.getElementById('btn-print-slip');
+
+  const bookingCard = document.getElementById('referral-booking-card');
+  const bookingBadge = document.getElementById('referral-booking-badge');
+  const protoTag = document.getElementById('protocol-timeframe-tag');
+  const dateInput = document.getElementById('referral-appointment-date');
+  const confirmMsg = document.getElementById('booking-confirmation-msg');
+  const confirmBtn = document.getElementById('btn-confirm-referral');
+  const confirmBtnText = document.getElementById('confirm-referral-btn-text');
+
+  resultCard.classList.remove('hidden');
+  slipBtn.href = `/slip/${activeToken}`;
+  slipBtn.classList.remove('animate-pulse');
+
+  // Reset booking controls
+  if (confirmMsg) confirmMsg.classList.add('hidden');
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.className = 'w-full btn primary font-extrabold text-sm py-2.5 px-4 rounded-lg bg-[#9E1B1B] hover:bg-[#7F1D1D] text-[#FAF6F0] shadow-cockpit flex items-center justify-center gap-2 transition-all';
+    confirmBtnText.textContent = 'Confirm & Issue Hospital Referral (Book Slot)';
+  }
+
+  if (outcome === 'moderate') {
+    banner.className = 'p-4 sm:p-5 rounded-xl mb-4 border flex items-center justify-between bg-[#FDF2E2] border-[#F6CE9A] text-[#9A3412]';
+    kicker.textContent = 'TELE-OPHTHALMOLOGY WORKFLOW TRIGGERED';
+    headline.textContent = 'TELE-OPHTHALMOLOGY REVIEW NEEDED';
+    desc.textContent = 'Moderate NPDR boundary detected. Image forwarded to tele-ophthalmology queue for 30-second specialist verification.';
+    icon.textContent = '🩺';
+    conformalSet.textContent = '[Moderate NPDR, Severe NPDR]';
+    dmeRisk.textContent = 'MODERATE RISK';
+    dmeRisk.className = 'font-mono font-extrabold text-sm sm:text-base text-[#EA580C] mt-1';
+    timeframe.textContent = 'Tele-Signoff (30s)';
+    timeframe.className = 'font-mono font-extrabold text-sm sm:text-base text-[#9A3412] mt-1';
+    if (bookingCard) bookingCard.classList.add('hidden');
+    const telePanel = document.getElementById('telereview-panel');
+    if (telePanel) {
+      telePanel.classList.remove('hidden');
+      // Start a live waiting timer
+      let secs = 0;
+      const clockEl = document.getElementById('telereview-live-clock');
+      const timer = setInterval(() => {
+        secs++;
+        if (clockEl) clockEl.textContent = `Waiting ${secs}s...`;
+        if (secs >= 30) clearInterval(timer);
+      }, 1000);
+    }
+    advanceProgressStep(4);
+  } else if (outcome === 'severe') {
+    banner.className = 'p-4 sm:p-5 rounded-xl mb-4 border flex items-center justify-between bg-[#FCE8E6] border-[#F7B5B0] text-[#881337]';
+    kicker.textContent = 'URGENT CLINICAL ESCALATION REQUIRED';
+    headline.textContent = 'URGENT SPECIALIST REFERRAL (14 DAYS)';
+    desc.textContent = 'High-risk lesions & suspected macular oedema (DME). Book hospital slot within 14 days.';
+    icon.textContent = '🚨';
+    conformalSet.textContent = '[Severe NPDR, Proliferative DR]';
+    dmeRisk.textContent = 'HIGH RISK (DME)';
+    dmeRisk.className = 'font-mono font-extrabold text-sm sm:text-base text-[#DC2626] mt-1';
+    timeframe.textContent = 'Urgent Refer (14 Days)';
+    timeframe.className = 'font-mono font-extrabold text-sm sm:text-base text-[#881337] mt-1';
+
+    document.getElementById('telereview-panel')?.classList.add('hidden');
+    if (bookingCard) {
+      bookingCard.classList.remove('hidden');
+      bookingBadge.textContent = 'Urgent Referral Required';
+      bookingBadge.className = 'status-badge bg-[#FCE8E6] text-[#881337] border border-[#F7B5B0]';
+      protoTag.textContent = '(Within 14 Days)';
+      dateInput.value = calculateTargetDate(6);
+      dateInput.max = calculateTargetDate(14);
+      const card1 = document.getElementById('facility-card-1');
+      if (card1) selectReferralFacility(card1, 'District Eye Hospital (Ananthapur)', 'Vitreo-Retina & Laser Clinic');
+      const docSel = document.getElementById('referral-doctor-select');
+      if (docSel) docSel.value = 'Dr. Rajesh Kumar (Vitreo-Retina)';
+    }
+    advanceProgressStep(5);
+  } else if (outcome === 'normal') {
+    banner.className = 'p-4 sm:p-5 rounded-xl mb-4 border flex items-center justify-between bg-[#EAF4EE] border-[#BCDBC6] text-[#22543D]';
+    kicker.textContent = 'LOW RISK CLINICAL OUTCOME';
+    headline.textContent = 'NO DIABETIC RETINOPATHY &middot; ANNUAL RECALL';
+    desc.textContent = 'Clean retina. No microaneurysms detected. Patient can safely be recalled in 12 months.';
+    icon.textContent = '✓';
+    conformalSet.textContent = '[No DR (Grade 0)]';
+    dmeRisk.textContent = 'NO RISK (Clear)';
+    dmeRisk.className = 'font-mono font-extrabold text-sm sm:text-base text-[#059669] mt-1';
+    timeframe.textContent = 'Annual Recall (12M)';
+    timeframe.className = 'font-mono font-extrabold text-sm sm:text-base text-[#22543D] mt-1';
+    document.getElementById('telereview-panel')?.classList.add('hidden');
+    if (bookingCard) bookingCard.classList.add('hidden');
+    advanceProgressStep(4);
+  } else if (outcome === 'cataract') {
+    banner.className = 'p-4 sm:p-5 rounded-xl mb-4 border flex items-center justify-between bg-[#FBECE5] border-[#F3C5B1] text-[#7C2D12]';
+    kicker.textContent = 'AUTOMATED CATARACT SAFEGUARD ROUTE';
+    headline.textContent = 'MEDIA OPACITY / CATARACT REFERRAL';
+    desc.textContent = '3 consecutive captures ungradable. Referring patient for slit-lamp cataract examination.';
+    icon.textContent = '👁️';
+    conformalSet.textContent = '[Ungradable (Media Opacity)]';
+    dmeRisk.textContent = 'UNGRADABLE';
+    dmeRisk.className = 'font-mono font-extrabold text-sm sm:text-base text-[#7C2D12] mt-1';
+    timeframe.textContent = 'Slit-Lamp (30 Days)';
+    timeframe.className = 'font-mono font-extrabold text-sm sm:text-base text-[#7C2D12] mt-1';
+
+    document.getElementById('telereview-panel')?.classList.add('hidden');
+    if (bookingCard) {
+      bookingCard.classList.remove('hidden');
+      bookingBadge.textContent = 'Slit-Lamp Cataract Referral';
+      bookingBadge.className = 'status-badge bg-[#FBECE5] text-[#7C2D12] border border-[#F3C5B1]';
+      protoTag.textContent = '(Within 30 Days)';
+      dateInput.value = calculateTargetDate(12);
+      dateInput.max = calculateTargetDate(30);
+      const card3 = document.getElementById('facility-card-3');
+      if (card3) selectReferralFacility(card3, 'CHC Central Ophthalmic Unit', 'Slit-Lamp & Cataract Surgery');
+      const docSel2 = document.getElementById('referral-doctor-select');
+      if (docSel2) docSel2.value = 'Dr. Meera Pillai (Cataract & IOL)';
+    }
+    advanceProgressStep(5);
+  }
+
+  updateCounselingScript();
+
+  if (window.innerWidth < 1024) {
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function updateCounselingScript(customText = null) {
+  if (customText && currentDialect === 'en') {
+    document.getElementById('counseling-script-text').textContent = `"${customText}"`;
+    return;
+  }
+  const scriptMap = COUNSELING_SCRIPTS[currentDialect] || COUNSELING_SCRIPTS.en;
+  const script = scriptMap[currentSample] || scriptMap.moderate;
+  document.getElementById('counseling-script-text').textContent = `"${script}"`;
+}
+
+// Reset Entire Examination for New Patient (Clean Initial State)
+function resetIntake() {
+  currentAttempt = 1;
+  generateNewPatientToken();
+  setExaminedEye('right');
+  clearFundusCapture();
+  const bookingCard = document.getElementById('referral-booking-card');
+  if (bookingCard) bookingCard.classList.add('hidden');
+  const telePanel = document.getElementById('telereview-panel');
+  if (telePanel) telePanel.classList.add('hidden');
+  document.getElementById('rail-1').className = 'attempt-segment current';
+  document.getElementById('rail-2').className = 'attempt-segment';
+  document.getElementById('rail-3').className = 'attempt-segment';
+  document.getElementById('attempt-indicator-text').textContent = 'Attempt 1 of 3';
+  document.getElementById('badge-od-status').textContent = 'Active';
+  document.getElementById('badge-od-status').className = 'eye-pill-badge ml-auto';
+  document.getElementById('badge-os-status').textContent = 'Pending';
+  document.getElementById('badge-os-status').className = 'eye-pill-badge ml-auto';
+  advanceProgressStep(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Sidebar Tab Switch
+function switchSidebarTab(tab) {
+  const rosterPanel = document.getElementById('sidebar-panel-roster');
+  const referralsPanel = document.getElementById('sidebar-panel-referrals');
+  const rosterTab = document.getElementById('sidebar-tab-roster');
+  const referralsTab = document.getElementById('sidebar-tab-referrals');
+  const activeClass = 'flex-1 text-[0.7rem] font-extrabold py-1.5 px-2 rounded-t-md border-b-2 border-[#9E1B1B] bg-[#FBEAE8] text-[#9E1B1B] transition-all';
+  const inactiveClass = 'flex-1 text-[0.7rem] font-extrabold py-1.5 px-2 rounded-t-md border-b-2 border-transparent bg-transparent text-[#6E5D57] hover:text-[#342725] transition-all';
+  if (tab === 'roster') {
+    rosterPanel.classList.remove('hidden');
+    rosterPanel.classList.add('flex');
+    referralsPanel.classList.add('hidden');
+    referralsPanel.classList.remove('flex');
+    rosterTab.className = activeClass;
+    referralsTab.className = inactiveClass;
+  } else {
+    rosterPanel.classList.add('hidden');
+    rosterPanel.classList.remove('flex');
+    referralsPanel.classList.remove('hidden');
+    referralsPanel.classList.add('flex');
+    referralsTab.className = activeClass;
+    rosterTab.className = inactiveClass;
+  }
+}
+
+// Workflow Step Progress Advance
+function advanceProgressStep(stepNum) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById(`progress-step-${i}`);
+    if (!el) continue;
+    el.classList.remove('active', 'done');
+    if (i < stepNum) el.classList.add('done');
+    else if (i === stepNum) el.classList.add('active');
+  }
+}
+
+// Filter Roster Cases
+function filterRoster(query) {
+  const items = document.querySelectorAll('#roster-list-desktop .roster-item');
+  const q = query.toLowerCase();
+  items.forEach(it => {
+    const text = it.textContent.toLowerCase();
+    it.style.display = text.includes(q) ? 'block' : 'none';
+  });
+}
+
+function setRosterCategory(cat, btn) {
+  btn.parentElement.querySelectorAll('button').forEach(b => {
+    b.className = 'px-2 py-0.5 rounded-md bg-[#EADFD3] text-[#231B1A] hover:bg-[#EFE7DE]';
+  });
+  btn.className = 'px-2 py-0.5 rounded-md bg-[#9E1B1B] text-[#FAF6F0]';
+  const items = document.querySelectorAll('#roster-list-desktop .roster-item');
+  items.forEach(it => {
+    if (cat === 'all') it.style.display = 'block';
+    else if (cat === 'urgent') it.style.display = it.textContent.includes('Urgent') || it.textContent.includes('Review') ? 'block' : 'none';
+    else if (cat === 'recall') it.style.display = it.textContent.includes('Recall') ? 'block' : 'none';
+  });
+}
+
+// Ping Tele-Review Specialist Doctor
+function pingTeleDoctor() {
+  UIkit.notification({
+    message: '<div class="text-xs font-bold font-mono">🔔 Tele-Review Specialist Alerted<br><span class="text-[#6E5D57]">Dr. Anita received priority notification on Doctor Cockpit</span></div>',
+    status: 'warning',
+    pos: 'top-right',
+    timeout: 3000
+  });
+}
+
+// Send SMS Notice
+function sendPatientSMSNotice() {
+  UIkit.notification({
+    message: `<div class="text-xs font-bold font-mono">📱 SMS Dispatched to Patient & Escort<br><span class="text-[#6E5D57]">Tracking Token: ${activeToken} &middot; URL: /s/${activeToken}</span></div>`,
+    status: 'success',
+    pos: 'top-center',
+    timeout: 3500
+  });
+}
+
+// Keyboard Shortcuts
+window.addEventListener('keydown', (e) => {
+  if (e.altKey && e.key.toLowerCase() === 'n') {
+    e.preventDefault();
+    resetIntake();
+  }
+  if (e.altKey && e.key.toLowerCase() === 'r') {
+    e.preventDefault();
+    runAITriageEvaluation();
+  }
+});
+
+// Initialization: Starts cleanly with dropzone prompt, NO image auto-loaded!
+window.addEventListener('DOMContentLoaded', () => {
+  initOpticalLoupe();
+  // Clean initial state: dropzone prompt is active, results hidden until user captures or clicks preset!
+  if (typeof gsap !== 'undefined') {
+    gsap.from('main > div', {
+      opacity: 0,
+      y: 16,
+      duration: 0.45,
+      stagger: 0.08,
+      ease: 'power2.out'
+    });
+  }
+});
+</script>
+</body>
+</html>

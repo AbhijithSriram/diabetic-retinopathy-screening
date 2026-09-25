@@ -1,20 +1,81 @@
 {% extends "base.html" %}{% set active = 'study' %}
-{% block title %}Reader study · DrishtiTrust{% endblock %}
+{% block title %}Reader Study Rig · DrishtiTrust{% endblock %}
 {% block body %}
-<h1>Reader study: can an ophthalmologist validate a case in under 30 seconds?</h1>
-<div class="panel">
-  <p>The ophthalmologist sees public-dataset photos (no patient data) in the same review screen the programme uses. The app records each decision and the time taken, then compares the grades with the datasets' reference grades. This measures the PS requirement directly; no dataset can.</p>
-  {% if items %}
-  <form method="post" action="/study/start" class="row">
-    <div><label>Reader initials</label><input type="text" name="reader" required></div>
-    <div><label>Number of cases</label><input type="text" name="n" value="40"></div>
-    <div style="align-self:end"><button class="primary" type="submit">Start</button></div>
-  </form>
-  <p class="small muted">{{ items|length }} cases available in app/study_set.csv.</p>
-  {% else %}<p class="notice">No study set yet. Run <code>python scripts/make_study_set.py</code> after the datasets are prepared.</p>{% endif %}
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+  <div>
+    <h1>Ophthalmologist Reader Study Rig</h1>
+    <p class="muted" style="margin:0;">Measuring real-world ophthalmologist validation time and diagnostic accuracy for problem statement SIH26038.</p>
+  </div>
+  <div>
+    <span class="pill review" style="font-size:12.5px;">Target: &lt; 30.0 s / Case</span>
+  </div>
 </div>
-{% if sessions %}<div class="panel"><h2>Sessions</h2><table>
-<tr><th>Reader</th><th>Answered</th><th></th></tr>
-{% for s in sessions %}<tr><td>{{ s.reader }}</td><td>{{ s.n }}</td><td><a href="/study-results/{{ s.id }}">results</a></td></tr>{% endfor %}
-</table></div>{% endif %}
+
+<div class="panel">
+  <h2>Study Protocol & Methodology</h2>
+  <p class="small muted" style="line-height:1.6;margin-bottom:16px;">
+    Problem statement <b>SIH26038 (MathWorks)</b> calls for clinical AI reports that enable <i>"ophthalmologist validation in under 30 seconds for a human-in-the-loop workflow"</i>. 
+    No synthetic simulation or test set can prove this — only practicing ophthalmologists interacting with the live review screen can. 
+    Participating doctors review 40 grade-stratified retina photographs from public research datasets (Messidor-2 and IDRiD). No hospital patient data is accessed.
+  </p>
+
+  {% if items %}
+  <form method="post" action="/study/start" class="row" style="background:var(--dt-surface-sunken);padding:18px;border-radius:var(--dt-radius-md);border:1px solid var(--dt-border-strong);">
+    <div>
+      <label for="f-reader">Reader Initials / Anonymized ID</label>
+      <input type="text" id="f-reader" name="reader" placeholder="e.g. DR-AN" required autocomplete="off">
+    </div>
+    <div>
+      <label for="f-n">Number of Stratified Cases</label>
+      <input type="text" id="f-n" name="n" value="40" required>
+    </div>
+    <div style="align-self:end;">
+      <button class="primary" type="submit" style="padding:10px 24px;width:100%;">
+        Start Reading Session →
+      </button>
+    </div>
+  </form>
+  <p class="small muted" style="margin-top:10px;">
+    {{ items|length }} candidate images available in stratified study pool (<code>app/study_set.csv</code>).
+  </p>
+  {% else %}
+  <div class="notice">
+    <b>Note:</b> No candidate study set found in <code>app/study_set.csv</code>. Run <code>python scripts/make_study_set.py</code> after dataset preparation to populate the stratified study set.
+  </div>
+  {% endif %}
+</div>
+
+{% if sessions %}
+<div class="panel" style="margin-top:16px;">
+  <h2>Completed Clinical Reader Sessions</h2>
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Session ID</th>
+          <th>Reader Initials</th>
+          <th>Date Recorded</th>
+          <th>Cases Answered</th>
+          <th style="text-align:right;">Statistical Report</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td><b style="font-family:var(--dt-font-mono);">#{{ s.id }}</b></td>
+          <td><b>{{ s.reader }}</b></td>
+          <td><span class="small" style="font-family:var(--dt-font-mono);">{{ s.created|ago }}</span></td>
+          <td><span class="pill review">{{ s.n }} cases</span></td>
+          <td style="text-align:right;">
+            <a class="btn primary" href="/study-results/{{ s.id }}" style="padding:5px 12px;font-size:12.5px;">
+              View Statistical Analysis →
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

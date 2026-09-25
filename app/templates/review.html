@@ -1,90 +1,351 @@
 {% extends "base.html" %}{% set active = 'study' if study else 'review' %}
-{% block title %}Review · DrishtiTrust{% endblock %}
+{% block title %}Tele-Review Workstation · DrishtiTrust{% endblock %}
 {% block body %}
-<div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap">
-  <h1 style="margin-right:auto">{% if study %}Reader study · case {{ study.k + 1 }} of {{ study.n }}{% else %}Case #{{ c.id }} · {{ c.patient or '—' }} {{ c.eye }} · {{ c.site }}{% endif %}</h1>
-  <span class="timer" id="timer">0.0 s</span>
-</div>
-<div class="grid2">
-  <div class="panel">
-    <div class="tabs">
-      {% if r.images %}
-      {% if r.images.lesions %}<button type="button" data-img="lesions" class="on">Lesions marked</button>{% endif %}
-      <button type="button" data-img="photo" class="{{ 'on' if not r.images.lesions }}">Photo</button>
-      {% if r.images.gradcam %}<button type="button" data-img="gradcam">Grad-CAM</button>{% endif %}
-      {% endif %}
-    </div>
-    <div class="imgbox"><img id="main" src="{{ (r.images.lesions or r.images.photo) if r.images }}" alt="retina"></div>
-    <p class="small muted">Lesion outlines: red rings = microaneurysms, dark red = haemorrhages, yellow = hard exudates, white = soft exudates. Green circle = optic disc; cyan circle = 1 disc diameter around the fovea.</p>
-  </div>
+<!-- Top Header Bar with Stopwatch HUD -->
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
   <div>
+    <h1 style="margin:0 0 4px;">
+      {% if study %}
+      Reader Study Session · Case {{ study.k + 1 }} of {{ study.n }}
+      {% else %}
+      Case #{{ c.id }} · {{ c.patient or 'Anonymized' }} ({{ c.eye|capitalize }} Eye)
+      {% endif %}
+    </h1>
+    <p class="muted small" style="margin:0;">
+      {% if study %}
+      Blinded clinical study session · Measure reading time and agreement against reference consensus.
+      {% else %}
+      Screened at <b>{{ c.site }}</b> · {{ 'URGENT referral' if c.urgent else 'Uncertain AI triage' }} · Target review time: &lt; 30.0 s
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Stopwatch HUD Display -->
+  <div style="display:flex;align-items:center;gap:12px;background:var(--dt-surface);padding:8px 18px;border-radius:var(--dt-radius-md);border:1.5px solid var(--dt-border-strong);box-shadow:var(--dt-shadow-sm);">
+    <div style="text-align:right;">
+      <div class="small muted" style="font-weight:600;text-transform:uppercase;letter-spacing:0.5px;font-size:10.5px;">Elapsed Review</div>
+      <div class="timer" id="timer">0.0 s</div>
+    </div>
+    <div id="timer-indicator" style="width:10px;height:10px;border-radius:50%;background:var(--dt-orange-primary);"></div>
+  </div>
+</div>
+
+<!-- Main Split-Screen Workstation -->
+<div class="grid2">
+  <!-- Left Viewport: Interactive Retina Canvas -->
+  <div class="panel" style="display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+      <div class="tabs" style="margin-bottom:0;">
+        {% if r.images %}
+        {% if r.images.lesions %}
+        <button type="button" data-img="lesions" id="tab-lesions" class="on">
+          <span style="font-family:var(--dt-font-mono);font-size:11px;opacity:0.7;">[1]</span> Annotated Lesions
+        </button>
+        {% endif %}
+        <button type="button" data-img="photo" id="tab-photo" class="{{ 'on' if not r.images.lesions }}">
+          <span style="font-family:var(--dt-font-mono);font-size:11px;opacity:0.7;">[2]</span> Raw Fundus
+        </button>
+        {% if r.images.gradcam %}
+        <button type="button" data-img="gradcam" id="tab-gradcam">
+          <span style="font-family:var(--dt-font-mono);font-size:11px;opacity:0.7;">[3]</span> Grad-CAM Heatmap
+        </button>
+        {% endif %}
+        {% endif %}
+      </div>
+
+      <div class="small muted" style="font-family:var(--dt-font-mono);">
+        Tab: Cycle Views
+      </div>
+    </div>
+
+    <!-- Retina Canvas Frame -->
+    <div class="imgbox" style="position:relative;min-height:360px;display:flex;align-items:center;justify-content:center;">
+      <img id="main-retina" src="{{ (r.images.lesions or r.images.photo) if r.images }}" alt="Retinal Fundus Image" style="transition:opacity 180ms ease-out;">
+    </div>
+
+    <!-- Anatomical Color Legend -->
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--dt-border-subtle);display:flex;flex-wrap:wrap;gap:12px 16px;font-size:12px;">
+      <span style="display:inline-flex;align-items:center;gap:5px;">
+        <span style="width:10px;height:10px;border-radius:50%;border:2px solid #DC2626;display:inline-block;"></span>
+        <b>MA</b>: Microaneurysms
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#881337;display:inline-block;"></span>
+        <b>HE</b>: Haemorrhages
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#D97706;display:inline-block;"></span>
+        <b>EX</b>: Hard Exudates
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block;"></span>
+        <b>SE</b>: Cotton-Wool Spots
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;">
+        <span style="width:10px;height:10px;border-radius:50%;border:2px solid #059669;display:inline-block;"></span>
+        <b>OD</b>: Optic Disc
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:5px;">
+        <span style="width:10px;height:10px;border-radius:50%;border:2px solid #0284C7;display:inline-block;"></span>
+        <b>Fovea</b>: 1-DD Zone
+      </span>
+    </div>
+  </div>
+
+  <!-- Right Viewport: Clinical Intelligence & Decision HUD -->
+  <div>
+    <!-- AI Diagnostic Summary -->
     <div class="panel">
-      <h2>AI summary</h2>
+      <h2>AI Clinical Summary</h2>
       {% if r.grade %}
-      <table class="gradebars">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
+        <div>
+          <span style="font-size:13px;color:var(--dt-ink-muted);">Referable DR Risk:</span>
+          <span style="font-size:20px;font-weight:700;font-family:var(--dt-font-mono);color:{{ 'var(--dt-crimson-primary)' if r.grade.p_referable >= 0.5 else 'var(--dt-orange-primary)' }};margin-left:6px;">
+            {{ '%.1f' % (100 * r.grade.p_referable) }}%
+          </span>
+        </div>
+        {% if r.grade_set %}
+        <span class="pill review" style="font-size:12px;">
+          90% Range: <b>{{ r.grade_set|join(' to ') }}</b>
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Probability Distribution Bars -->
+      <table class="gradebars" style="margin-top:6px;">
         {% for p in r.grade.probs %}
-        <tr class="{{ 'inset' if r.grade_set and ICDR[loop.index0] in r.grade_set }}"><td>{{ loop.index0 }} · {{ ICDR[loop.index0] }}</td>
-        <td style="width:100%"><div class="bar"><span style="width: {{ (100 * p)|round(1) }}%"></span></div></td><td class="small">{{ '%.0f' % (100 * p) }}%</td></tr>
+        <tr class="{{ 'inset' if r.grade_set and ICDR[loop.index0] in r.grade_set }}">
+          <td>{{ loop.index0 }} · {{ ICDR[loop.index0] }}</td>
+          <td style="width:100%;">
+            <div class="bar">
+              <span style="width:{{ (100 * p)|round(1) }}%;background:{{ 'var(--dt-crimson-primary)' if loop.index0 >= 2 else 'var(--dt-orange-vibrant)' }};"></span>
+            </div>
+          </td>
+          <td class="small" style="font-family:var(--dt-font-mono);width:45px;text-align:right;">
+            {{ '%.0f' % (100 * p) }}%
+          </td>
+        </tr>
         {% endfor %}
       </table>
-      <p>Referable probability <b>{{ '%.0f' % (100 * r.grade.p_referable) }}%</b>{% if r.grade_set %} · 90% plausible range: <b>{{ r.grade_set|join(' – ') }}</b>{% endif %}</p>
-      {% if r.reasons %}<p class="small">Sent for review because: {{ r.reasons|join('; ') }}.</p>{% endif %}
-      {% else %}<p class="muted">Grader not available.</p>{% endif %}
+
+      {% if r.reasons %}
+      <div style="margin-top:10px;padding:8px 12px;background:var(--dt-surface-sunken);border-radius:var(--dt-radius-sm);font-size:12.5px;">
+        <b>Triage Rationale:</b> {{ r.reasons|join('; ') }}.
+      </div>
+      {% endif %}
+      {% else %}
+      <p class="muted">Ordinal grader inference not available.</p>
+      {% endif %}
     </div>
+
+    <!-- Lesion Evidence & ICDR Clinical Rules -->
     {% if r.rules %}
     <div class="panel">
-      <h2>Lesion evidence (ICDR rules)</h2>
-      <ul class="trace">{% for t in r.rules.trace %}<li>{{ t }}</li>{% endfor %}</ul>
-      <table class="small">
-        <tr><th>Quadrant</th><th>MA</th><th>HE</th><th>EX</th><th>SE</th></tr>
-        {% for q, v in r.rules.quadrants.items() %}<tr><td>{{ q }}</td><td>{{ v.MA or 0 }}</td><td>{{ v.HE or 0 }}</td><td>{{ v.EX or 0 }}</td><td>{{ v.SE or 0 }}</td></tr>{% endfor %}
+      <h2>Lesion Spatial Breakdown (ICDR Criteria)</h2>
+      <table class="small" style="margin-bottom:10px;">
+        <thead>
+          <tr>
+            <th>Quadrant</th>
+            <th style="color:#DC2626;">MA</th>
+            <th style="color:#881337;">HE</th>
+            <th style="color:#D97706;">EX</th>
+            <th style="color:#F59E0B;">SE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for q, v in r.rules.quadrants.items() %}
+          <tr>
+            <td><b>{{ q|capitalize }}</b></td>
+            <td>{{ v.MA or 0 }}</td>
+            <td>{{ v.HE or 0 }}</td>
+            <td>{{ v.EX or 0 }}</td>
+            <td>{{ v.SE or 0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
       </table>
-      <p class="small muted">Fovea {{ r.rules.fovea.source }}; disc diameter {{ r.rules.disc_diameter_source }}.</p>
+
+      {% if r.rules.dme_flag %}
+      <div style="background:var(--dt-review-bg);border:1px solid var(--dt-review-border);padding:8px 12px;border-radius:var(--dt-radius-sm);margin-bottom:10px;font-size:13px;color:var(--dt-review-ink);font-weight:600;">
+        ⚠️ Possible Diabetic Macular Oedema (Hard exudates detected within 1 DD of fovea).
+      </div>
+      {% endif %}
+
+      <ul class="trace small" style="margin:4px 0 0;padding-left:18px;color:var(--dt-ink-muted);">
+        {% for t in r.rules.trace %}
+        <li>{{ t }}</li>
+        {% endfor %}
+      </ul>
     </div>
     {% endif %}
-    <div class="panel">
-      <h2>Your decision</h2>
-      <div class="decide">
-        {% for g in range(5) %}<button type="button" data-grade="{{ g }}">{{ g }}<small>{{ ICDR[g] }}</small></button>{% endfor %}
+
+    <!-- Ophthalmologist Decision Pad -->
+    <div class="panel" style="border:1.5px solid var(--dt-border-focus);background:var(--dt-surface-raised);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <h2 style="margin:0;">Your Clinical Decision</h2>
+        <span class="small muted" style="font-family:var(--dt-font-mono);">Hotkeys: [0] to [4]</span>
       </div>
-      <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="dme"> Macular oedema (hard exudates within 1 DD of fovea)</label>
-      <p><button type="button" id="ungradable">Ungradable</button> <span class="small muted">Keys: 0–4 grade · D oedema · U ungradable</span></p>
-      <p class="small muted" id="done"></p>
+
+      <div class="decide">
+        {% for g in range(5) %}
+        <button type="button" class="btn" data-grade="{{ g }}" id="btn-grade-{{ g }}">
+          {{ g }}
+          <small>{{ ICDR[g] }}</small>
+        </button>
+        {% endfor %}
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--dt-border-subtle);">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13.5px;">
+          <input type="checkbox" id="dme" style="accent-color:var(--dt-orange-primary);width:16px;height:16px;">
+          <span>Macular Oedema <b>[Key: D]</b></span>
+        </label>
+
+        <button type="button" class="btn" id="ungradable" style="padding:6px 14px;font-size:13px;">
+          Mark Ungradable <b>[Key: U]</b>
+        </button>
+      </div>
+
+      <p class="small" id="done" style="margin:10px 0 0;font-weight:600;color:var(--dt-orange-primary);min-height:18px;"></p>
     </div>
   </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <script>
 const imgs = {{ (r.images or {})|tojson }};
 const t0 = performance.now();
 const timer = document.getElementById('timer');
+const timerIndicator = document.getElementById('timer-indicator');
 let stopped = false;
-const tick = () => { if (stopped) return; const s = (performance.now() - t0) / 1000; timer.textContent = s.toFixed(1) + ' s'; timer.classList.toggle('over', s > 30); };
+
+// Millisecond Stopwatch HUD with Amber/Crimson Alert Shifts
+const tick = () => {
+  if (stopped) return;
+  const s = (performance.now() - t0) / 1000;
+  timer.textContent = s.toFixed(1) + ' s';
+  if (s >= 30.0) {
+    timer.classList.add('over');
+    timer.classList.remove('warn');
+    if (timerIndicator) timerIndicator.style.background = 'var(--dt-crimson-primary)';
+  } else if (s >= 20.0) {
+    timer.classList.add('warn');
+    timer.classList.remove('over');
+    if (timerIndicator) timerIndicator.style.background = 'var(--dt-orange-warm)';
+  } else {
+    timer.classList.remove('warn', 'over');
+    if (timerIndicator) timerIndicator.style.background = 'var(--dt-orange-primary)';
+  }
+};
 const timerId = setInterval(tick, 100);
-document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('on'));
-  b.classList.add('on'); document.getElementById('main').src = imgs[b.dataset.img];
+
+// Multi-Layer Canvas Switcher with Optical Blend
+const mainImg = document.getElementById('main-retina');
+const tabButtons = document.querySelectorAll('.tabs button');
+
+function switchLayer(layerKey) {
+  if (!imgs[layerKey]) return;
+  tabButtons.forEach(b => b.classList.toggle('on', b.dataset.img === layerKey));
+  mainImg.style.opacity = '0.35';
+  setTimeout(() => {
+    mainImg.src = imgs[layerKey];
+    mainImg.style.opacity = '1.0';
+  }, 90);
+}
+
+tabButtons.forEach(b => {
+  b.onclick = () => switchLayer(b.dataset.img);
 });
+
+// Layer Cycle Order for Tab Key
+const layers = ['lesions', 'photo', 'gradcam'].filter(k => imgs[k]);
+let currentLayerIdx = 0;
+function cycleLayer() {
+  if (!layers.length) return;
+  currentLayerIdx = (currentLayerIdx + 1) % layers.length;
+  switchLayer(layers[currentLayerIdx]);
+}
+
+// Decision Submission Pipeline
 const study = {{ study|tojson }};
 async function submit(grade, ungradable) {
   if (stopped) return;
   stopped = true;
+  clearInterval(timerId);
   const ms = Math.round(performance.now() - t0);
-  const body = {grade: grade, dme: document.getElementById('dme').checked ? 1 : 0, ungradable: ungradable ? 1 : 0, ms: ms,
-                ai_p_ref: {{ (r.grade.p_referable if r.grade else none)|tojson }}, ai_outcome: {{ r.outcome|tojson }}};
+
+  // Tactile button glow feedback
+  if (!ungradable && grade !== null) {
+    const btn = document.getElementById('btn-grade- ' + grade) || document.querySelector(`[data-grade="${grade}"]`);
+    if (btn) {
+      btn.style.background = 'var(--dt-orange-vibrant)';
+      btn.style.color = '#FAF6F0';
+    }
+  }
+
+  const doneP = document.getElementById('done');
+  doneP.textContent = `Recording decision (${(ms / 1000).toFixed(1)} s)…`;
+
+  const body = {
+    grade: grade,
+    dme: document.getElementById('dme').checked ? 1 : 0,
+    ungradable: ungradable ? 1 : 0,
+    ms: ms,
+    ai_p_ref: {{ (r.grade.p_referable if r.grade else none)|tojson }},
+    ai_outcome: {{ r.outcome|tojson }}
+  };
+
   const url = study ? `/api/study/${study.sid}/${study.k}` : '/api/review/{{ c.id }}';
-  const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-  const j = await res.json();
-  document.getElementById('done').textContent = `Saved in ${(ms / 1000).toFixed(1)} s` + (j.final ? ` → ${j.final}` : '');
-  setTimeout(() => { location.href = study ? j.next : {{ (('/review/' ~ next_id) if next_id else '/review')|tojson }}; }, 500);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const j = await res.json();
+    doneP.textContent = `Saved in ${(ms / 1000).toFixed(1)} s` + (j.final ? ` → Assigned: ${j.final.toUpperCase()}` : '') + ' · Advancing…';
+    setTimeout(() => {
+      location.href = study ? j.next : {{ (('/review/' ~ next_id) if next_id else '/review')|tojson }};
+    }, 400);
+  } catch (err) {
+    doneP.textContent = 'Error saving decision: ' + err.message;
+    stopped = false;
+  }
 }
-document.querySelectorAll('.decide button').forEach(b => b.onclick = () => submit(+b.dataset.grade, false));
+
+// Button Click Event Listeners
+document.querySelectorAll('.decide button').forEach(b => {
+  b.onclick = () => submit(+b.dataset.grade, false);
+});
 document.getElementById('ungradable').onclick = () => submit(0, true);
+
+// Fast Keyboard Hotkey Protocol
 document.addEventListener('keydown', e => {
-  if (e.key >= '0' && e.key <= '4') submit(+e.key, false);
-  else if (e.key === 'd' || e.key === 'D') document.getElementById('dme').click();
-  else if (e.key === 'u' || e.key === 'U') submit(0, true);
+  if (e.target && ['input', 'textarea', 'select'].includes(e.target.tagName.toLowerCase())) return;
+
+  if (e.key >= '0' && e.key <= '4') {
+    e.preventDefault();
+    submit(+e.key, false);
+  } else if (e.key === 'd' || e.key === 'D') {
+    e.preventDefault();
+    const dmeBox = document.getElementById('dme');
+    dmeBox.checked = !dmeBox.checked;
+  } else if (e.key === 'u' || e.key === 'U') {
+    e.preventDefault();
+    submit(0, true);
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    cycleLayer();
+  } else if (e.key === '1') {
+    switchLayer('lesions');
+  } else if (e.key === '2') {
+    switchLayer('photo');
+  } else if (e.key === '3') {
+    switchLayer('gradcam');
+  }
 });
 </script>
 {% endblock %}

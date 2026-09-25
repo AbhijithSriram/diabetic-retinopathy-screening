@@ -62,11 +62,22 @@ def _decode(data: bytes) -> np.ndarray:
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
-# ------------------------------------------------------------------ field
+# ------------------------------------------------------------------ landing & portals
 @app.get("/", response_class=HTMLResponse)
-def field(request: Request):
+def landing(request: Request):
+    return tpl.TemplateResponse(request, "landing.html", {})
+
+
+@app.get("/portal/screener", response_class=HTMLResponse)
+@app.get("/screen", response_class=HTMLResponse)
+def portal_screener(request: Request):
     s = screener()
-    return tpl.TemplateResponse(request, "field.html", {"missing": s.missing, "samples": _samples()})
+    return tpl.TemplateResponse(request, "portal_screener.html", {"missing": s.missing, "samples": _samples()})
+
+
+@app.get("/portal/doctor", response_class=HTMLResponse)
+def portal_doctor(request: Request):
+    return tpl.TemplateResponse(request, "portal_doctor.html", {"cases": db.review_queue()})
 
 
 def _samples():
@@ -87,9 +98,24 @@ async def api_screen(file: UploadFile | None = File(None), sample: str = Form(""
     res = screener().screen(rgb, attempt=attempt, site=site, lang=lang)
     audit = res.get("outcome") == "recall" and random.random() < AUDIT_FRACTION
     case_id, tok = db.insert_case(res, site, patient, eye, attempt, lang, audit=audit)
+    ref_id = None
     if res.get("outcome") == "refer":
-        db.create_referral(case_id, urgent=bool(res.get("urgent")))
-    return {"case_id": case_id, "token": tok, "outcome": res["outcome"]}
+        ref_id = db.create_referral(case_id, urgent=bool(res.get("urgent")))
+    return {"case_id": case_id, "token": tok, "outcome": res["outcome"], "referral_id": ref_id, "result": res}
+
+
+@app.post("/api/referral/book")
+async def api_book_referral(request: Request):
+    b = await request.json()
+    case_id = int(b.get("case_id", 0))
+    facility = b.get("facility", "District Eye Hospital (Ananthapur)")
+    specialty = b.get("specialty", "Vitreo-Retina & Laser Clinic")
+    appointment_date = b.get("appointment_date", "")
+    transit = bool(b.get("transit", False))
+    escort = bool(b.get("escort", False))
+    notes = b.get("notes", "")
+    res = db.book_referral_direct(case_id, facility, specialty, appointment_date, transit=transit, escort=escort, notes=notes)
+    return {"ok": True, "booking": res, "slip_url": f"/slip/{res['token']}"}
 
 
 @app.get("/case/{case_id}", response_class=HTMLResponse)

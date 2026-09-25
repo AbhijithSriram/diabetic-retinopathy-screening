@@ -20,3 +20,8 @@ app/study_set.csv
 matlab/drishti_district.slx
 matlab/slprj/
 matlab/ml*.png
+
+# Agent customizations, skills, and design repos
+.agents/
+node_modules/
+package-lock.json
