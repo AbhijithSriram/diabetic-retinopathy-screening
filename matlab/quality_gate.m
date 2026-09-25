@@ -40,10 +40,26 @@ for i = 0:2
 end
 m.evenness = min(sec) / max(max(sec), 1);
 g = double(crop(:, :, 2));
-lap = imfilter(g, [0 1 0; 1 -4 1; 0 1 0], 'replicate');
-sd = sqrt(max(imgaussfilt(g.^2, 8) - imgaussfilt(g, 8).^2, 1));
+% cv2.Laplacian(green, ksize=3) does NOT apply the textbook 4-neighbour
+% Laplacian -- that is what ksize=1 gives. For ksize>1 OpenCV builds the
+% operator from Sobel second derivatives, and for ksize=3 the effective
+% kernel is [2 0 2; 0 -8 0; 2 0 2]: twice the magnitude, diagonal rather
+% than cross. Using the textbook kernel makes |lap| 2.45x too small, and
+% because focus is a variance it comes out 6x too small, so a sharp
+% photograph is reported as blurry.
+lap = imfilter(g, [2 0 2; 0 -8 0; 2 0 2], 'symmetric');
+% Same kernel-size trap as local_average: cv2.GaussianBlur(ksize = 0) on a
+% float32 image truncates at 4 sigma (65 taps at sigma 8), imgaussfilt at
+% 2 sigma (33). The tighter kernel tracks local detail instead of averaging
+% it out, so local_sd comes out too large, lap/(sd+4) too small, and the
+% focus score too low -- a sharp photograph gets reported as blurry.
+sig = 8;
+fs = bitor(round(8 * sig + 1), 1);
+blur1 = imgaussfilt(g, sig, 'FilterSize', fs, 'Padding', 'symmetric');
+blur2 = imgaussfilt(g.^2, sig, 'FilterSize', fs, 'Padding', 'symmetric');
+sd = sqrt(max(blur2 - blur1.^2, 1));
 r = lap(inner) ./ (sd(inner) + 4);
-m.focus = var(r) / 100;
+m.focus = var(r, 1) / 100;   % var(...,1) normalises by N, as numpy.var does
 
 probs = {};
 if m.fov_fraction < cfg.min_fov_fraction || m.completeness < 0.6, probs{end + 1} = 'off_centre'; end

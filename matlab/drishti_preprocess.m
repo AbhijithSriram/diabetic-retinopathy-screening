@@ -61,8 +61,15 @@ end
 
 function B = local_average(I, sigma)
 % Same as drishti/preprocess.py local_average: blur at 1/4 resolution.
+%
+% The kernel size has to be set explicitly. OpenCV's GaussianBlur, called
+% with ksize = 0 on a float32 image, truncates the Gaussian at 4 sigma:
+% ksize = round(8*sigma + 1), forced odd. imgaussfilt defaults to 2 sigma,
+% roughly half the radius, which is a different filter -- and Graham
+% normalisation multiplies the difference by four.
 [h, w, ~] = size(I);
+s = sigma / 4;
 small = imresize(I, [floor(h / 4) floor(w / 4)], 'box');
-small = imgaussfilt(small, sigma / 4);
+small = imgaussfilt(small, s, 'FilterSize', bitor(round(8 * s + 1), 1), 'Padding', 'symmetric');
 B = imresize(small, [h w], 'bilinear');
 end
