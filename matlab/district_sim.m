@@ -10,11 +10,16 @@ function S = district_sim(paramsFile, reviewers, onlineFraction, completion)
 %   case, hospital slots. Backlogs carry over in FIFO cohorts, so the share
 %   of reviews finished within the SLA can be counted.
 
-if nargin < 1, paramsFile = fullfile(fileparts(mfilename('fullpath')), '..', 'sim', 'params.json'); end
+% isempty as well as nargin, so district_sim([], 2, 0.6, 0.40) works -- that
+% is the documented way to override the later arguments while keeping the
+% default parameter file.
+if nargin < 1 || isempty(paramsFile)
+    paramsFile = fullfile(fileparts(mfilename('fullpath')), '..', 'sim', 'params.json');
+end
 P = jsondecode(fileread(paramsFile));
-if nargin < 2, reviewers = P.review.reviewers; end
-if nargin < 3, onlineFraction = P.network.online_fraction; end
-if nargin < 4, completion = P.referral.completion_baseline; end
+if nargin < 2 || isempty(reviewers), reviewers = P.review.reviewers; end
+if nargin < 3 || isempty(onlineFraction), onlineFraction = P.network.online_fraction; end
+if nargin < 4 || isempty(completion), completion = P.referral.completion_baseline; end
 rng(P.run.seed);
 days = P.run.days;
 perDay = P.district.annual_screenings / P.district.working_days_per_year;
