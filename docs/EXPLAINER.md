@@ -200,7 +200,7 @@ SIH26038/
     │                  vessels, rules, conformal triage, explain, report)
     ├── app/           the web app (field, review, referrals, dashboard, study)
     ├── sim/           district simulation
-    ├── matlab/        MATLAB + Simulink scripts (untested)
+    ├── matlab/        MATLAB + Simulink scripts (verified on R2026b)
     ├── runs/          trained models + ONNX exports (not in git; MATLAB
     │                  models are a GitHub release)
     ├── results/       VALIDATION.md and the raw JSON behind it

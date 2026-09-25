@@ -6,9 +6,10 @@ function [img, fov, geom] = drishti_preprocess(rgb, outSize, normalise)
 %   2. square crop centred on the FOV (diameter = larger bbox side), padded
 %      with zeros, resized to outSize;
 %   3. optional Graham normalisation: 4*I - 4*Gauss(I, size/30) + 128.
-%   Requires Image Processing Toolbox. UNTESTED in this repository's CI
-%   (no MATLAB licence on the build machine): compare against the Python
-%   output with matlab/check_parity.m before relying on it.
+%   Requires Image Processing Toolbox. Verified against the Python output on
+%   R2026b by check_export (max difference 0.005). imgaussfilt truncates at
+%   2 sigma where OpenCV uses 4, so FilterSize is set explicitly below; see
+%   matlab/README.md.
 
 if nargin < 3, normalise = false; end
 rgb = im2uint8(rgb);

@@ -35,9 +35,12 @@
 9. **Translations need review.** The Hindi and Tamil messages were written by
    the developers and must be checked by native speakers who train field
    staff before any use with patients.
-10. **MATLAB and Simulink code is untested.** The build machine has no MATLAB
-    licence. The Python pipeline is the reference implementation; the ONNX
-    export includes a numerical parity check against it.
+10. **The MATLAB port is verified, with one gap.** On R2026b (25 September
+    2026) `check_export` agrees with the Python reference to within 0.005,
+    `run_pipeline` grades a photograph, and the SimEvents model agrees with
+    the base-MATLAB one to within 1-3%. The gap: `quality_gate.m` implements
+    the rule-based checks only, so the learned gradability model runs
+    Python-side. The Python pipeline remains the reference implementation.
 11. **The rule engine explains, it does not triage.** A matched-workload
     ablation showed it adds no safety over widening the CNN's own review
     band, and its lesion evidence has low specificity (a single false

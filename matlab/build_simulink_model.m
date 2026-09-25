@@ -14,11 +14,11 @@ function mdl = build_simulink_model(paramsFile)
 %   Reviewer availability (h/day) and link availability are folded into
 %   effective service times; sim/district.py models them explicitly.
 %
-%   UNTESTED: written without a MATLAB/SimEvents licence on the build
-%   machine. Parameter names are set through trySet(), which prints any
-%   name your release rejects; fix those with
-%   get_param(<block>, 'DialogParameters'). matlab/district_sim.m runs the
-%   same model in base MATLAB as a cross-check.
+%   Verified on R2026b, 25 September 2026: builds, runs, and agrees with
+%   matlab/district_sim.m (the same model in base MATLAB) to within 1-3%.
+%   Parameter names are set through trySet(), which prints any name your
+%   release rejects; fix those with get_param(<block>, 'DialogParameters'),
+%   and see matlab/README.md for the seven API differences already handled.
 
 if nargin < 1
     paramsFile = fullfile(fileparts(mfilename('fullpath')), '..', 'sim', 'params.json');

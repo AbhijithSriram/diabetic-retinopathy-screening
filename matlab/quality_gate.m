@@ -2,7 +2,9 @@ function q = quality_gate(rgb, cfgPath)
 %QUALITY_GATE  Rule-based image checks mirroring drishti/quality/gate.py.
 %   Each failed check maps to one instruction a health worker can act on.
 %   Thresholds are read from configs/quality.json (fitted in Python on
-%   DDR valid). UNTESTED here (no MATLAB licence on the build machine).
+%   DDR valid). Verified against the Python gate on R2026b. Note the
+%   Laplacian: cv2.Laplacian(ksize=3) is Sobel-derived, so the kernel below
+%   is [2 0 2; 0 -8 0; 2 0 2], not the textbook one.
 
 if nargin < 2
     cfgPath = fullfile(fileparts(mfilename('fullpath')), '..', 'configs', 'quality.json');
