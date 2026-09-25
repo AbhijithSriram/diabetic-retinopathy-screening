@@ -3,8 +3,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 # datasets and generated artefacts never go in git
-data/
-runs/
+/data/
+/runs/
 *.pt
 *.pth
 *.onnx
