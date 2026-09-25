@@ -54,6 +54,9 @@ def auc_ci(y, p, n_boot=300, seed=0):
 def main():
     names = sys.argv[1:] or DEFAULT
     runs = {n: d for n in names if (d := load(n)) is not None}
+    if not runs:
+        sys.exit(f"no runs/<name>/preds.csv found for {names}: pass run names that exist "
+                 f"(trained weights and predictions are not in git)")
     common = None
     for d in runs.values():
         common = d.index if common is None else common.intersection(d.index)
