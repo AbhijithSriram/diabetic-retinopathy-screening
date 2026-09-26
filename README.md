@@ -109,12 +109,15 @@ to the grader and the reviewer; see [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
 ## Running it
 
-Tested on Linux with an RTX 5000 Ada (32 GB); the first builds ran on Windows
-with an 8 GB RTX 4060. Datasets and trained weights are not in this
-repository (see [docs/DATASETS.md](docs/DATASETS.md)). The exported MATLAB
-models and the sample photographs are published as a release asset:
-[v1.1-ens_d3](../../releases/tag/v1.1-ens_d3) (`drishtitrust_matlab_models_ens_d3.zip`,
-with placement instructions inside).
+**Just want to run the app?** Follow [docs/SETUP.md](docs/SETUP.md): after
+cloning, `python scripts/bootstrap.py` installs the packages, downloads the
+trained models (PyTorch and MATLAB) from the release pinned in
+`configs/model_release.json`, sets up MATLAB if it is installed, and checks
+everything. No GPU is needed.
+
+The rest of this section is for retraining. Tested on Linux with an RTX 5000
+Ada (32 GB); the first builds ran on Windows with an 8 GB RTX 4060. Datasets
+are not in this repository (see [docs/DATASETS.md](docs/DATASETS.md)).
 
 ```bash
 python -m venv --system-site-packages .venv    # needs PyTorch with CUDA already installed
@@ -151,10 +154,19 @@ python scripts/make_report.py --grader ens_d3 --seg seg_r34        # results/VAL
 python scripts/export_matlab.py --graders v2s_d2,v2s768_d2,b0_768_d2 --ens ens_d3
 python -m sim.district --sweep --eval eval_ens_d3.json
 python -m uvicorn app.main:app --port 8026      # web app
+python scripts/e2e_ui.py [--backend matlab]   # click through every page in Chromium (throwaway DB)
 ```
 
 The app serves the runs named in `configs/models.json` (an ensemble name
-serves all its members); triage switches are in `configs/triage.json`,
+serves all its members) when their PyTorch checkpoints are on disk, and
+otherwise runs every network in MATLAB from `runs/onnx_matlab` through the
+MATLAB Engine for Python (`drishti/matlab_backend.py` -> `matlab/drishti_screen.m`;
+MATLAB takes about two minutes to start and import the networks, then
+2-4 s a photograph on a GPU). `DRISHTI_BACKEND=python` or `matlab` forces
+one. The engine ships with MATLAB: install it with
+`python -m pip install "<matlabroot>/extern/engines/python"` from an
+administrator prompt (PyPI's `matlabengine` lags a release behind).
+Triage and patient messages are applied in Python either way; triage switches are in `configs/triage.json`,
 referral time frames in `configs/referral.json`.
 
 MATLAB: see [matlab/README.md](matlab/README.md) — start with

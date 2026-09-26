@@ -1,0 +1,25 @@
+{
+  "_note": "The trained models the app serves. scripts/bootstrap.py downloads these release assets, checks each SHA-256 and unpacks them at the repository root (paths inside the zips are repo-relative). Bump the tag and hashes whenever the models change.",
+  "repo": "AbhijithSriram/diabetic-retinopathy-screening",
+  "tag": "v1.2-ens_d3",
+  "assets": {
+    "drishtitrust_models_pytorch.zip": {
+      "for": "python",
+      "sha256": "b74011fc2b42715bb7c66d70fa13d922f44a5422a00a0d6eb055631783890f10",
+      "bytes": 351616615,
+      "contents": "runs/{ens_d3,v2s_d2,v2s768_d2,b0_768_d2,seg_r34,lmk_r18,qual_b0}: PyTorch checkpoints"
+    },
+    "drishtitrust_models_matlab.zip": {
+      "for": "matlab",
+      "sha256": "d53e7e8744f6ced153e20c02060f1ec41b16f5462334e4c30f3c6d6d5ff6a335",
+      "bytes": 418430494,
+      "contents": "runs/onnx_matlab: the same models as ONNX for MATLAB, with manifest.json and parity references"
+    },
+    "drishtitrust_samples.zip": {
+      "for": "all",
+      "sha256": "4c38f38d2fa53efd1ef1a7a6eae05d8ee053efa622d57c93d6a87effa2167270",
+      "bytes": 6361012,
+      "contents": "app/samples: six public fundus photographs (IDRiD CC BY 4.0; HRF)"
+    }
+  }
+}

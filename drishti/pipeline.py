@@ -40,7 +40,9 @@ class Screener:
     def __init__(self, models: dict | None = None, device: str | None = None):
         chosen = json.loads(MODELS_CFG.read_text()) if MODELS_CFG.exists() else {}
         self.names = {**DEFAULT_MODELS, **chosen, **(models or {})}
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        # device_count as well: with CUDA_VISIBLE_DEVICES set to "" torch reports
+        # CUDA available but has no device, and loading onto it would fail
+        self.device = device or ("cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 0 else "cpu")
         self.grader = self.seg = self.lmk = self.qual = None
         self.members = []  # (model, input size) per ensemble member
         self.seg_thr, self.policy, self.site_lambdas = None, None, {}

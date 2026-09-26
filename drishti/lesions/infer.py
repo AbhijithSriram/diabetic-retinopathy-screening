@@ -53,7 +53,7 @@ def predict_logits(model, img_raw: np.ndarray, device="cuda", tta: bool = True) 
     """img_raw: LESION_SIZE x LESION_SIZE RGB crop. Returns (5, H, W) logits
     (flip-TTA averaged in logit space); -30 outside the field of view."""
     x = to_tensor(full_input(img_raw))[None].to(device)
-    with torch.autocast("cuda", dtype=torch.bfloat16):
+    with torch.autocast("cuda", dtype=torch.bfloat16, enabled=str(device).startswith("cuda")):  # bf16 on the GPU only
         lg = model(x).float()
         if tta:
             lg = (lg + torch.flip(model(torch.flip(x, [3])).float(), [3])) / 2
