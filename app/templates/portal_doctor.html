@@ -161,15 +161,17 @@
     <div class="portal-role-badge">
       <span style="font-size: 1.1rem;">🩺</span>
       <div>
-        <div style="font-weight: 700; font-size: 0.85rem; color: var(--dt-ink-heading);">Dr. Anita &middot; Retina Specialist</div>
-        <div style="font-size: 0.72rem; color: var(--dt-ink-muted);">District Hospital Tele-Ophthalmology Cockpit</div>
+        <div style="font-weight: 700; font-size: 0.85rem; color: var(--dt-ink-heading);">
+          Reviewer: <input id="reviewer-name" placeholder="your name" style="font: inherit; border: 1px solid var(--dt-border-strong); border-radius: var(--dt-radius-sm); padding: 0 0.3rem; width: 9rem; background: var(--dt-surface);">
+        </div>
+        <div style="font-size: 0.72rem; color: var(--dt-ink-muted);">Tele-ophthalmology review queue</div>
       </div>
     </div>
   </div>
 
   <div style="display: flex; align-items: center; gap: 1rem;">
     <div style="font-size: 0.78rem; font-family: var(--dt-font-mono); background: var(--dt-surface-sunken); border: 1px solid var(--dt-border-strong); padding: 0.35rem 0.65rem; border-radius: var(--dt-radius-sm); color: var(--dt-ink-muted);">
-      HOTKEYS: <strong style="color: var(--dt-crimson-primary);">[0-4]</strong> Grade &middot; <strong style="color: var(--dt-crimson-primary);">[D]</strong> DME &middot; <strong style="color: var(--dt-crimson-primary);">[U]</strong> Ungradable &middot; <strong style="color: var(--dt-crimson-primary);">[Tab]</strong> Sign &amp; Next
+      HOTKEYS: <strong style="color: var(--dt-crimson-primary);">[0-4]</strong> Grade &middot; <strong style="color: var(--dt-crimson-primary);">[D]</strong> DME &middot; <strong style="color: var(--dt-crimson-primary);">[U]</strong> Ungradable &middot; <strong style="color: var(--dt-crimson-primary);">[Enter]</strong> Sign &amp; Next
     </div>
     <a href="/portal/screener" class="btn secondary" style="font-size: 0.82rem; padding: 0.35rem 0.75rem; border-radius: var(--dt-radius-sm); text-decoration: none; border: 1px solid var(--dt-border-strong); background: var(--dt-surface-raised); color: var(--dt-ink-heading); font-weight: 600;">
       Switch to Field Screener &rarr;
@@ -179,192 +181,163 @@
 
 <!-- 3-Column Cockpit Workspace -->
 <div class="cockpit-layout">
-  <!-- Column 1: Priority Queue List -->
+  <!-- Column 1: the real review queue (uncertain cases + the random audit sample) -->
   <aside class="queue-col">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
       <h2 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dt-ink-muted); margin: 0;">
-        Tele-Review Queue (3)
+        Tele-Review Queue ({{ cases|length }})
       </h2>
+      {% set n_urgent = cases|selectattr('urgent')|list|length %}
+      {% if n_urgent %}
       <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-crimson-primary); background: var(--dt-crimson-subtle); padding: 0.15rem 0.5rem; border-radius: 999px;">
-        1 URGENT
+        {{ n_urgent }} URGENT
       </span>
+      {% endif %}
     </div>
 
     <div style="overflow-y: auto; flex: 1; padding-right: 0.25rem;">
-      <!-- Urgent Queue Item -->
-      <div class="queue-card" id="q-102" onclick="selectCase(102)">
+      {% for c in cases %}
+      <div class="queue-card" id="q-{{ c.id }}" onclick="selectCase({{ c.id }})">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+          {% if c.audit and c.outcome == 'recall' %}
+          <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-recall-ink); background: var(--dt-recall-bg); padding: 0.15rem 0.45rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-recall-border);">Audit sample</span>
+          {% elif c.urgent %}
           <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-refer-ink); background: var(--dt-refer-bg); padding: 0.15rem 0.45rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-refer-border);">🚨 URGENT</span>
-          <span style="font-size: 0.7rem; font-family: var(--dt-font-mono); color: var(--dt-ink-muted);">Wait: 48m</span>
+          {% else %}
+          <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-review-ink); background: var(--dt-review-bg); padding: 0.15rem 0.45rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-review-border);">Tele-review</span>
+          {% endif %}
+          <span style="font-size: 0.7rem; font-family: var(--dt-font-mono); color: var(--dt-ink-muted);">Waiting {{ c.created|ago }}</span>
         </div>
-        <div style="font-weight: 700; font-size: 0.88rem; color: var(--dt-ink-heading);">P-2026-0089 (OS Left)</div>
-        <div style="font-size: 0.75rem; color: var(--dt-ink-muted);">Camp-A &middot; Suspected Severe NPDR / DME</div>
-        <div style="font-size: 0.72rem; font-family: var(--dt-font-mono); color: var(--dt-crimson-primary); font-weight: 700; margin-top: 0.25rem;">p(referable): 0.962</div>
+        <div style="font-weight: 700; font-size: 0.88rem; color: var(--dt-ink-heading);">{{ c.patient or ('Case #' ~ c.id) }} ({{ 'OD right' if c.eye == 'right' else 'OS left' if c.eye == 'left' else c.eye }})</div>
+        <div style="font-size: 0.75rem; color: var(--dt-ink-muted);">{{ c.site }}</div>
+        {% if c.p_ref is not none %}
+        <div style="font-size: 0.72rem; font-family: var(--dt-font-mono); color: var(--dt-orange-primary); font-weight: 700; margin-top: 0.25rem;">P(referable): {{ '%.3f'|format(c.p_ref) }}</div>
+        {% endif %}
       </div>
-
-      <!-- Active Review Item -->
-      <div class="queue-card active" id="q-101" onclick="selectCase(101)">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-          <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-review-ink); background: var(--dt-review-bg); padding: 0.15rem 0.45rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-review-border);">Tele-Review</span>
-          <span style="font-size: 0.7rem; font-family: var(--dt-font-mono); color: var(--dt-ink-muted);">Wait: 24m</span>
-        </div>
-        <div style="font-weight: 700; font-size: 0.88rem; color: var(--dt-ink-heading);">P-2026-0042 (OD Right)</div>
-        <div style="font-size: 0.75rem; color: var(--dt-ink-muted);">PHC-1 &middot; Moderate boundary uncertainty</div>
-        <div style="font-size: 0.72rem; font-family: var(--dt-font-mono); color: var(--dt-orange-primary); font-weight: 700; margin-top: 0.25rem;">p(referable): 0.845</div>
+      {% else %}
+      <div style="font-size: 0.85rem; color: var(--dt-ink-muted); padding: 0.5rem;">
+        The queue is empty. Cases arrive here when the AI is unsure, or when a routine recall is picked for the random audit.
       </div>
-
-      <!-- Audit Sample Item -->
-      <div class="queue-card" id="q-103" onclick="selectCase(103)">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-          <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-recall-ink); background: var(--dt-recall-bg); padding: 0.15rem 0.45rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-recall-border);">Audit Sample</span>
-          <span style="font-size: 0.7rem; font-family: var(--dt-font-mono); color: var(--dt-ink-muted);">Wait: 2h</span>
-        </div>
-        <div style="font-weight: 700; font-size: 0.88rem; color: var(--dt-ink-heading);">P-2026-0114 (OD Right)</div>
-        <div style="font-size: 0.75rem; color: var(--dt-ink-muted);">PHC-2 &middot; 2% Safety Quality Audit</div>
-        <div style="font-size: 0.72rem; font-family: var(--dt-font-mono); color: var(--dt-ink-muted); font-weight: 700; margin-top: 0.25rem;">p(referable): 0.082</div>
-      </div>
+      {% endfor %}
     </div>
   </aside>
 
-  <!-- Column 2: Large High-Resolution Fundus Canvas & 30s Stopwatch HUD -->
+  <!-- Column 2: the case's own images and lesion evidence -->
   <main class="center-col">
-    <!-- Center Top Controls -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-      <!-- 3-Layer Optical Cross-Fade Toggles -->
       <div style="display: flex; gap: 0.4rem;">
-        <button type="button" class="optical-toggle-btn active" id="btn-layer-lesion" onclick="setOpticalLayer('lesion')">
-          1. Lesions U-Net
-        </button>
-        <button type="button" class="optical-toggle-btn" id="btn-layer-raw" onclick="setOpticalLayer('raw')">
-          2. Raw Fundus
-        </button>
-        <button type="button" class="optical-toggle-btn" id="btn-layer-gradcam" onclick="setOpticalLayer('gradcam')">
-          3. Grad-CAM Heatmap
-        </button>
+        <button type="button" class="optical-toggle-btn active" id="btn-layer-lesion" onclick="setOpticalLayer('lesion')">1. Lesions</button>
+        <button type="button" class="optical-toggle-btn" id="btn-layer-raw" onclick="setOpticalLayer('raw')">2. Photo</button>
+        <button type="button" class="optical-toggle-btn" id="btn-layer-gradcam" onclick="setOpticalLayer('gradcam')">3. Grad-CAM</button>
       </div>
-
-      <!-- 30-Second Stopwatch HUD -->
       <div style="display: flex; align-items: center; gap: 0.6rem; background: var(--dt-surface-sunken); border: 1px solid var(--dt-border-strong); padding: 0.35rem 0.75rem; border-radius: var(--dt-radius-sm);">
-        <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-ink-muted); text-transform: uppercase;">Review Pace:</span>
-        <span id="cockpit-timer" class="timer" style="font-size: 1.15rem; font-family: var(--dt-font-mono); font-weight: 700;">00:14.8</span>
+        <span style="font-size: 0.72rem; font-weight: 700; color: var(--dt-ink-muted); text-transform: uppercase;">Review time:</span>
+        <span id="cockpit-timer" class="timer" style="font-size: 1.15rem; font-family: var(--dt-font-mono); font-weight: 700;">00:00.0</span>
       </div>
     </div>
 
-    <!-- Canvas Display Container -->
-    <div style="position: relative; width: 100%; height: 420px; border-radius: var(--dt-radius-md); overflow: hidden; background: #3B0E09; border: 2px solid var(--dt-border-strong); box-shadow: var(--dt-shadow-md); margin-bottom: 1rem;">
-      <img id="cockpit-fundus-img" src="" alt="Fundus Examination" style="width: 100%; height: 100%; object-fit: contain; transition: opacity 180ms ease-out;">
+    <div style="position: relative; width: 100%; height: 420px; border-radius: var(--dt-radius-md); overflow: hidden; background: #140404; border: 2px solid var(--dt-border-strong); box-shadow: var(--dt-shadow-md); margin-bottom: 1rem;">
+      <img id="cockpit-fundus-img" src="" alt="" style="width: 100%; height: 100%; object-fit: contain; transition: opacity 180ms ease-out;">
       <div id="layer-badge" style="position: absolute; bottom: 0.75rem; left: 0.75rem; background: rgba(35,27,26,0.85); color: #F5EFEB; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: var(--dt-radius-sm);">
-        Layer: Lesions U-Net Overlay
+        Select a case from the queue
       </div>
     </div>
 
-    <!-- 4-Quadrant Lesion Breakdown Matrix -->
+    <div style="background: var(--dt-surface-sunken); border: 1px solid var(--dt-border-strong); border-radius: var(--dt-radius-sm); padding: 0.85rem; margin-bottom: 0.75rem;">
+      <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--dt-crimson-primary); margin-bottom: 0.4rem;">
+        AI summary
+      </div>
+      <div id="ai-summary" style="font-size: 0.82rem; color: var(--dt-ink-heading); line-height: 1.5;">—</div>
+    </div>
+
     <div style="background: var(--dt-surface-sunken); border: 1px solid var(--dt-border-strong); border-radius: var(--dt-radius-sm); padding: 0.85rem;">
       <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--dt-crimson-primary); margin-bottom: 0.4rem;">
-        4-Quadrant Spatial Lesion Counts (ETDRS Matrix)
+        Lesion counts by quadrant (detected by the lesion model)
       </div>
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; font-size: 0.78rem;">
-        <div style="background: var(--dt-surface); padding: 0.4rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-border-subtle);">
-          <div style="color: var(--dt-ink-muted); font-size: 0.7rem;">Sup-Nasal</div>
-          <div style="font-family: var(--dt-font-mono); font-weight: 700; color: var(--dt-ink-heading);">3 MA &middot; 1 HE</div>
-        </div>
-        <div style="background: var(--dt-surface); padding: 0.4rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-border-subtle);">
-          <div style="color: var(--dt-ink-muted); font-size: 0.7rem;">Sup-Temporal</div>
-          <div style="font-family: var(--dt-font-mono); font-weight: 700; color: var(--dt-ink-heading);">4 MA &middot; 3 HE &middot; 1 EX</div>
-        </div>
-        <div style="background: var(--dt-surface); padding: 0.4rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-border-subtle);">
-          <div style="color: var(--dt-ink-muted); font-size: 0.7rem;">Inf-Nasal</div>
-          <div style="font-family: var(--dt-font-mono); font-weight: 700; color: var(--dt-ink-heading);">2 MA &middot; 1 HE</div>
-        </div>
-        <div style="background: var(--dt-surface); padding: 0.4rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-border-subtle);">
-          <div style="color: var(--dt-ink-muted); font-size: 0.7rem;">Inf-Temporal</div>
-          <div style="font-family: var(--dt-font-mono); font-weight: 700; color: var(--dt-ink-heading);">3 MA &middot; 2 HE &middot; 3 EX</div>
-        </div>
-      </div>
+      <div id="quadrant-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; font-size: 0.78rem;"></div>
+      <ul id="rule-trace" style="font-size: 0.75rem; color: var(--dt-ink-muted); margin: 0.5rem 0 0; padding-left: 1.1rem;"></ul>
     </div>
   </main>
 
-  <!-- Column 3: Diagnostic Signoff Pad & Closed-Loop Referral Dispatch -->
+  <!-- Column 3: sign-off, saved through /api/review -->
   <aside class="decision-col">
     <div style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dt-ink-muted); margin-bottom: 0.75rem;">
       Ophthalmologist Signoff
     </div>
 
-    <!-- ICDR Final Grade Buttons -->
     <div style="margin-bottom: 1rem;">
       <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--dt-ink-heading); margin-bottom: 0.4rem;">
-        CONFIRMED ICDR GRADE:
+        YOUR ICDR GRADE:
       </label>
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
         <button type="button" class="grade-btn" id="g-0" onclick="setDoctorGrade(0)">0: No DR</button>
         <button type="button" class="grade-btn" id="g-1" onclick="setDoctorGrade(1)">1: Mild NPDR</button>
-        <button type="button" class="grade-btn selected" id="g-2" onclick="setDoctorGrade(2)">2: Mod NPDR</button>
+        <button type="button" class="grade-btn" id="g-2" onclick="setDoctorGrade(2)">2: Mod NPDR</button>
         <button type="button" class="grade-btn" id="g-3" onclick="setDoctorGrade(3)">3: Sev NPDR</button>
       </div>
       <button type="button" class="grade-btn" id="g-4" onclick="setDoctorGrade(4)" style="width: 100%; margin-top: 0.4rem;">
         4: Proliferative DR (PDR)
       </button>
+      <button type="button" class="grade-btn" id="g-u" onclick="setDoctorGrade('u')" style="width: 100%; margin-top: 0.4rem;">
+        Ungradable
+      </button>
     </div>
 
-    <!-- Secondary Clinical Flags -->
     <div style="background: var(--dt-surface-sunken); border: 1px solid var(--dt-border-strong); border-radius: var(--dt-radius-sm); padding: 0.75rem; margin-bottom: 1rem;">
       <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 700; color: var(--dt-ink-heading); cursor: pointer; margin-bottom: 0.5rem;">
-        <input type="checkbox" id="chk-dme" checked style="accent-color: var(--dt-crimson-primary);">
+        <input type="checkbox" id="chk-dme" style="accent-color: var(--dt-crimson-primary);">
         Suspected Macular Oedema (DME)
       </label>
-      <div style="font-size: 0.72rem; color: var(--dt-ink-muted); line-height: 1.4;">
-        Nearest hard exudate is <strong>0.84 disc diameters</strong> from fovea (within 1 DD risk zone).
-      </div>
+      <div id="dme-note" style="font-size: 0.72rem; color: var(--dt-ink-muted); line-height: 1.4;"></div>
     </div>
 
-    <!-- Closed-Loop Hospital Referral Scheduling -->
     <div style="background: var(--dt-surface-sunken); border: 1px solid var(--dt-border-strong); border-radius: var(--dt-radius-sm); padding: 0.75rem; margin-bottom: 1.25rem;">
       <div style="font-size: 0.75rem; font-weight: 700; color: var(--dt-crimson-primary); margin-bottom: 0.4rem;">
-        CLOSED-LOOP DISPATCH:
+        IF YOU REFER:
       </div>
-      <label style="display: block; font-size: 0.72rem; font-weight: 600; color: var(--dt-ink-muted); margin-bottom: 0.2rem;">HOSPITAL APPOINTMENT SLOT</label>
-      <input type="date" id="ref-date" value="2026-10-12" style="width: 100%; box-sizing: border-box; background: var(--dt-surface); border: 1px solid var(--dt-border-strong); padding: 0.4rem; border-radius: var(--dt-radius-sm); font-size: 0.85rem; font-family: var(--dt-font-mono); margin-bottom: 0.5rem;">
-      <label style="display: block; font-size: 0.72rem; font-weight: 600; color: var(--dt-ink-muted); margin-bottom: 0.2rem;">CARE ESCALATION TIER</label>
-      <select style="width: 100%; box-sizing: border-box; background: var(--dt-surface); border: 1px solid var(--dt-border-strong); padding: 0.4rem; border-radius: var(--dt-radius-sm); font-size: 0.82rem;">
-        <option>Tier 1: Patient Direct SMS</option>
-        <option>Tier 2: Family / Caregiver Notice</option>
-        <option>Tier 3: ASHA Worker Home Escort</option>
-      </select>
+      <label style="display: block; font-size: 0.72rem; font-weight: 600; color: var(--dt-ink-muted); margin-bottom: 0.2rem;">APPOINTMENT DATE (optional)</label>
+      <input type="date" id="ref-date" style="width: 100%; box-sizing: border-box; background: var(--dt-surface); border: 1px solid var(--dt-border-strong); padding: 0.4rem; border-radius: var(--dt-radius-sm); font-size: 0.85rem; font-family: var(--dt-font-mono); margin-bottom: 0.5rem;">
+      <div style="font-size: 0.72rem; color: var(--dt-ink-muted); line-height: 1.4;">
+        Grade 2 or worse, DME or ungradable creates a referral (urgent for grade 3+ or DME). Contact escalation (patient, then family, then ASHA worker) runs in the <a href="/referrals" target="_blank">referral tracker</a>.
+      </div>
     </div>
 
-    <!-- Sign & Advance Button -->
-    <button type="button" class="btn" onclick="submitReviewAndAdvance()" style="width: 100%; background: var(--dt-crimson-primary); color: #F5EFEB; font-weight: 700; font-size: 0.95rem; padding: 0.75rem; border-radius: var(--dt-radius-sm); border: none; cursor: pointer; box-shadow: var(--dt-shadow-sm); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+    <button type="button" id="btn-sign" class="btn" onclick="submitReviewAndAdvance()" style="width: 100%; background: var(--dt-crimson-primary); color: #F5EFEB; font-weight: 700; font-size: 0.95rem; padding: 0.75rem; border-radius: var(--dt-radius-sm); border: none; cursor: pointer; box-shadow: var(--dt-shadow-sm); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-      Sign &amp; Advance Next (Tab)
+      Sign &amp; Next (Enter)
     </button>
+    <div id="sign-status" style="font-size: 0.78rem; color: var(--dt-ink-muted); margin-top: 0.6rem; min-height: 1.2em;"></div>
   </aside>
 </div>
 
 <script>
-// Mock Fundus Layer SVGs for Doctor Review
-const LAYERS = {
-  lesion: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 400"><rect width="500" height="400" fill="%233B0E09"/><circle cx="250" cy="200" r="170" fill="%236A180E"/><circle cx="250" cy="200" r="165" fill="%23852012"/><circle cx="170" cy="200" r="38" fill="%23DE8838" stroke="%23059669" stroke-width="4"/><circle cx="310" cy="200" r="14" fill="%23380B06"/><circle cx="310" cy="200" r="54" fill="none" stroke="%230284C7" stroke-width="3" stroke-dasharray="5 3"/><circle cx="280" cy="180" r="5" fill="%23D97706"/><circle cx="295" cy="190" r="6" fill="%23D97706"/><circle cx="270" cy="240" r="7" fill="%23881337"/><circle cx="340" cy="230" r="8" fill="%23881337"/><circle cx="230" cy="140" r="5" fill="%23DC2626"/><rect x="330" cy="170" width="14" height="10" rx="3" fill="%23F59E0B" opacity="0.85"/><text x="250" y="360" font-family="sans-serif" font-size="14" fill="%23F5EFEB" text-anchor="middle">U-Net Segmented Lesions Overlay</text></svg>',
-  raw: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 400"><rect width="500" height="400" fill="%233B0E09"/><circle cx="250" cy="200" r="170" fill="%236A180E"/><circle cx="250" cy="200" r="165" fill="%23852012"/><circle cx="170" cy="200" r="38" fill="%23DE8838"/><circle cx="310" cy="200" r="14" fill="%23380B06"/><path d="M170 200 Q 230 150 360 140" stroke="%23480B06" stroke-width="6" fill="none"/><path d="M170 200 Q 240 250 370 260" stroke="%23480B06" stroke-width="5" fill="none"/><text x="250" y="360" font-family="sans-serif" font-size="14" fill="%23F5EFEB" text-anchor="middle">Raw Unprocessed Fundus Photography</text></svg>',
-  gradcam: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 400"><rect width="500" height="400" fill="%233B0E09"/><circle cx="250" cy="200" r="170" fill="%236A180E"/><radialGradient id="gcam2" cx="62%" cy="50%" r="35%"><stop offset="0%" stop-color="%23DC2626" stop-opacity="0.85"/><stop offset="50%" stop-color="%23EA580C" stop-opacity="0.65"/><stop offset="80%" stop-color="%23F59E0B" stop-opacity="0.3"/><stop offset="100%" stop-color="%230284C7" stop-opacity="0"/></radialGradient><circle cx="250" cy="200" r="165" fill="url(%23gcam2)"/><text x="250" y="360" font-family="sans-serif" font-size="14" fill="%23F5EFEB" text-anchor="middle">Grad-CAM Convolutional Attention Heatmap</text></svg>'
-};
-
+// Every case, image and number here comes from the database via /api/case;
+// a sign-off is saved with /api/review exactly as on the classic review page.
+const QUEUE = {{ cases|map(attribute='id')|list|tojson }};
+const ICDR = {{ ICDR|tojson }};
+let caseId = null;
+let caseData = null;
 let currentLayer = 'lesion';
-let selectedGrade = 2;
-let timerSeconds = 14.8;
-let timerInterval;
+let selectedGrade = null;
+let t0 = null;
+let timerInterval = null;
+
+try { document.getElementById('reviewer-name').value = localStorage.getItem('drishti-reviewer') || ''; } catch (e) {}
+document.getElementById('reviewer-name').addEventListener('change', (e) => {
+  try { localStorage.setItem('drishti-reviewer', e.target.value); } catch (err) {}
+});
 
 function setOpticalLayer(layer) {
   currentLayer = layer;
   document.querySelectorAll('.optical-toggle-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-layer-' + layer).classList.add('active');
-
+  if (!caseData) return;
+  const imgs = caseData.images || {};
+  const src = { lesion: imgs.lesions, raw: imgs.photo, gradcam: imgs.gradcam }[layer];
   const img = document.getElementById('cockpit-fundus-img');
-  img.style.opacity = '0.3';
-  setTimeout(() => {
-    img.src = LAYERS[layer];
-    img.style.opacity = '1';
-    document.getElementById('layer-badge').textContent = 'Layer: ' + (layer === 'lesion' ? 'Lesions U-Net Overlay' : layer === 'raw' ? 'Raw Fundus' : 'Grad-CAM Attention Heatmap');
-  }, 100);
+  img.src = src || imgs.photo || '';
+  document.getElementById('layer-badge').textContent = src ? ('Layer: ' + { lesion: 'lesions (MA red, HE dark red, EX yellow, SE white; disc green, fovea cyan)', raw: 'photo', gradcam: 'Grad-CAM (referable DR)' }[layer])
+                                                            : 'This layer is not available for this case';
 }
 
 function setDoctorGrade(g) {
@@ -373,91 +346,112 @@ function setDoctorGrade(g) {
   document.getElementById('g-' + g).classList.add('selected');
 }
 
-function selectCase(id) {
+function fmt(p) { return (p * 100).toFixed(1) + '%'; }
+
+async function selectCase(id) {
   document.querySelectorAll('.queue-card').forEach(c => c.classList.remove('active'));
   const card = document.getElementById('q-' + id);
   if (card) card.classList.add('active');
+  caseId = id;
+  caseData = null;
+  selectedGrade = null;
+  document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('sign-status').textContent = 'Loading…';
+  const r = await fetch(`/api/case/${id}?full=1`);
+  if (!r.ok) { document.getElementById('sign-status').textContent = 'Could not load this case.'; return; }
+  caseData = await r.json();
+  document.getElementById('sign-status').textContent = '';
+  setOpticalLayer(currentLayer);
 
-  // Reset timer
+  const g = caseData.grade;
+  const parts = [];
+  if (g) {
+    parts.push(`<strong>P(referable DR) ${fmt(g.p_referable)}</strong>; most likely <strong>${g.most_likely}</strong>.`);
+    parts.push('Grade probabilities: ' + g.probs.map((p, i) => `${i}: ${fmt(p)}`).join(' · ') + '.');
+  }
+  if (caseData.grade_set) parts.push(`90% plausible range: ${caseData.grade_set.join(' to ')}.`);
+  if (caseData.reasons && caseData.reasons.length) parts.push('Why it is here: ' + caseData.reasons.join('; ') + '.');
+  if (caseData.audit && caseData.outcome === 'recall') parts.push('Random audit of an automatic recall: grade it without assuming it is healthy.');
+  if (caseData.quality && caseData.quality.gradability !== null && caseData.quality.gradability !== undefined) parts.push(`Gradability ${caseData.quality.gradability.toFixed(2)}.`);
+  document.getElementById('ai-summary').innerHTML = parts.join(' ') || 'No AI output for this case.';
+
+  const rules = caseData.rules || {};
+  const grid = document.getElementById('quadrant-grid');
+  grid.innerHTML = '';
+  Object.entries(rules.quadrants || {}).forEach(([q, c]) => {
+    const txt = ['MA', 'HE', 'EX', 'SE'].filter(k => c[k]).map(k => `${c[k]} ${k}`).join(' · ') || 'none';
+    grid.insertAdjacentHTML('beforeend', `<div style="background: var(--dt-surface); padding: 0.4rem; border-radius: var(--dt-radius-sm); border: 1px solid var(--dt-border-subtle);"><div style="color: var(--dt-ink-muted); font-size: 0.7rem;">${q.replace('-', ' ')}</div><div style="font-family: var(--dt-font-mono); font-weight: 700; color: var(--dt-ink-heading);">${txt}</div></div>`);
+  });
+  const trace = document.getElementById('rule-trace');
+  trace.innerHTML = '';
+  (rules.trace || []).forEach(t => { const li = document.createElement('li'); li.textContent = t; trace.appendChild(li); });
+
+  document.getElementById('chk-dme').checked = !!rules.dme_flag;
+  document.getElementById('dme-note').textContent = (rules.nearest_exudate_dd !== undefined && rules.nearest_exudate_dd !== null)
+    ? `AI: nearest hard exudate ${Number(rules.nearest_exudate_dd).toFixed(2)} disc diameters from the fovea${rules.dme_flag ? ' (within 1 DD)' : ''}.` : 'AI: no hard exudates detected.';
+  document.getElementById('ref-date').value = '';
+
   clearInterval(timerInterval);
-  timerSeconds = 0;
-  startTimer();
-}
-
-function startTimer() {
+  t0 = performance.now();
   timerInterval = setInterval(() => {
-    timerSeconds += 0.1;
+    const s = (performance.now() - t0) / 1000;
     const el = document.getElementById('cockpit-timer');
-    const s = timerSeconds.toFixed(1);
-    el.textContent = '00:' + (timerSeconds < 10 ? '0' : '') + s;
-
-    if (timerSeconds >= 30) {
-      el.className = 'timer over';
-    } else if (timerSeconds >= 20) {
-      el.className = 'timer warn';
-    } else {
-      el.className = 'timer';
-    }
+    el.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + (s % 60).toFixed(1).padStart(4, '0');
+    el.className = s >= 30 ? 'timer over' : s >= 20 ? 'timer warn' : 'timer';
   }, 100);
 }
 
-function submitReviewAndAdvance() {
-  if (typeof UIkit !== 'undefined') {
-    UIkit.notification({
-      message: '<div class="text-xs font-bold font-mono">✅ Case Signed Off &middot; ICDR Grade ' + selectedGrade + '<br><span class="text-ink-muted">Referral Dispatched to District Hospital &middot; Advancing Next Case</span></div>',
-      status: 'success',
-      pos: 'top-right',
-      timeout: 3000
-    });
-  } else {
-    alert('Case signed off as ICDR Grade ' + selectedGrade + '. Referral dispatched to District Hospital. Advancing to next queue item in 250ms.');
+async function submitReviewAndAdvance() {
+  if (!caseId) return;
+  if (selectedGrade === null) { document.getElementById('sign-status').textContent = 'Choose a grade (or Ungradable) first.'; return; }
+  const ms = Math.round(performance.now() - t0);
+  const ungradable = selectedGrade === 'u';
+  const body = { grade: ungradable ? 0 : selectedGrade, dme: document.getElementById('chk-dme').checked ? 1 : 0,
+                 ungradable: ungradable ? 1 : 0, ms, reviewer: document.getElementById('reviewer-name').value || 'reviewer' };
+  const btn = document.getElementById('btn-sign');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/review/${caseId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(await r.text());
+    const out = await r.json();
+    const date = document.getElementById('ref-date').value;
+    if (out.final === 'refer' && date) {
+      await fetch('/api/referral/book', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ case_id: caseId, appointment_date: date, notes: `Booked at tele-review by ${body.reviewer}` }) });
+    }
+    clearInterval(timerInterval);
+    document.getElementById('sign-status').textContent =
+      `Saved in ${(ms / 1000).toFixed(1)} s: ${out.final === 'refer' ? 'referral created' : 'routine recall'}.`;
+    const card = document.getElementById('q-' + caseId);
+    if (card) { card.style.opacity = '0.45'; card.onclick = null; }
+    const i = QUEUE.indexOf(caseId);
+    const next = QUEUE.slice(i + 1).concat(QUEUE.slice(0, i)).find(id => { const c = document.getElementById('q-' + id); return c && c.onclick; });
+    if (next) setTimeout(() => selectCase(next), 600);
+  } catch (e) {
+    document.getElementById('sign-status').textContent = 'Could not save: ' + (e.message || e);
+  } finally {
+    btn.disabled = false;
   }
-
-  // Animate transition with GSAP
-  if (typeof gsap !== 'undefined') {
-    gsap.fromTo('.center-col', { opacity: 0.5, y: 8 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' });
-  }
-
-  selectCase(102);
 }
 
-// Keyboard shortcuts for rapid 30s evaluation
 window.addEventListener('keydown', (e) => {
-  if (['0', '1', '2', '3', '4'].includes(e.key)) {
-    setDoctorGrade(parseInt(e.key));
-  } else if (e.key.toLowerCase() === 'd') {
-    const chk = document.getElementById('chk-dme');
-    chk.checked = !chk.checked;
-  } else if (e.key === 'Tab') {
-    e.preventDefault();
-    submitReviewAndAdvance();
-  }
+  if (e.target && e.target.id === 'reviewer-name') return;
+  if (['0', '1', '2', '3', '4'].includes(e.key)) setDoctorGrade(parseInt(e.key));
+  else if (e.key.toLowerCase() === 'u') setDoctorGrade('u');
+  else if (e.key.toLowerCase() === 'd') { const c = document.getElementById('chk-dme'); c.checked = !c.checked; }
+  else if (e.key === 'Enter') { e.preventDefault(); submitReviewAndAdvance(); }
 });
 
-// Initial Setup & GSAP Stagger
 window.addEventListener('DOMContentLoaded', () => {
-  setOpticalLayer('lesion');
-  startTimer();
-
-  // GSAP 3-Column Entrance Stagger
+  if (QUEUE.length) selectCase(QUEUE[0]);
   if (typeof gsap !== 'undefined') {
-    gsap.from(['.queue-col', '.center-col', '.decision-col'], {
-      opacity: 0,
-      y: 25,
-      duration: 0.6,
-      stagger: 0.12,
-      ease: 'power2.out'
-    });
+    gsap.from(['.queue-col', '.center-col', '.decision-col'], { opacity: 0, y: 25, duration: 0.6, stagger: 0.12, ease: 'power2.out' });
   }
-
-  // Aceternity Spotlight Tracking
   document.querySelectorAll('.spotlight-card, .queue-card, .decision-col, .queue-col, .center-col').forEach(card => {
     card.addEventListener('mousemove', (e) => {
       const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      card.style.setProperty('--mouse-x', `${x}px`);
-      card.style.setProperty('--mouse-y', `${y}px`);
+      card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+      card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
     });
   });
 });

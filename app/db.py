@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import sqlite3
 import time
 from pathlib import Path
 
-DB = Path(__file__).resolve().parent / "drishti.db"
+DB = Path(os.environ.get("DRISHTI_DB", Path(__file__).resolve().parent / "drishti.db"))  # tests point this at a throwaway file
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cases(
@@ -139,10 +140,10 @@ def book_referral_direct(case_id: int, facility: str, specialty: str, appointmen
         c.execute("UPDATE referrals SET state='booked', updated=?, history_json=?, appointment=? WHERE id=?",
                   (time.time(), json.dumps(hist), appointment_date, ref_id))
 
-        sms_text = (f"DrishtiTrust Referral Booked: Appointment confirmed at {facility} ({specialty}) on {appointment_date}. "
-                    f"Transit: {'Reserved (Bus Route 4B)' if transit else 'Self'}. Slip token: {ref['token']}. Bring your printed slip.")
+        sms_text = (f"DrishtiTrust referral: appointment at {facility} ({specialty}) on {appointment_date}. "
+                    f"Transport: {'requested' if transit else 'own'}. Slip token: {ref['token']}. Bring your printed slip.")
         c.execute("INSERT INTO outbox(created, referral_id, channel, recipient, text) VALUES(?,?,?,?,?)",
-                  (time.time(), ref_id, "SMS", "patient", sms_text))
+                  (time.time(), ref_id, "SMS (mock)", "patient", sms_text))
 
         return {
             "referral_id": ref_id,
@@ -152,7 +153,7 @@ def book_referral_direct(case_id: int, facility: str, specialty: str, appointmen
             "specialty": specialty,
             "appointment": appointment_date,
             "transit": transit,
-            "sms_sent": True
+            "sms": "mock (written to the outbox; no gateway connected)"
         }
 
 

@@ -13,7 +13,7 @@
 
 {% if missing %}
 <div class="notice">
-  <b>System Note:</b> Models not trained yet: <code>{{ missing|join(', ') }}</code>. Screening still operates in fallback mode and cases automatically divert to human tele-review.
+  <b>System Note:</b> Model files not found: <code>{{ missing|join(', ') }}</code>. Run <code>python scripts/bootstrap.py --models-only</code> and restart. Until then every case goes to human tele-review.
 </div>
 {% endif %}
 

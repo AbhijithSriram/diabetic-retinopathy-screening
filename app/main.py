@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import random
 import sys
 import time
@@ -17,6 +18,7 @@ import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.concurrency import run_in_threadpool
 from fastapi.templating import Jinja2Templates
 
 ROOT = Path(__file__).resolve().parent
@@ -32,26 +34,51 @@ from contextlib import asynccontextmanager  # noqa: E402
 @asynccontextmanager
 async def lifespan(_app):
     db.init()
+    s = screener()
+    if hasattr(s, "warm_up"):
+        s.warm_up()  # MATLAB starts and imports its networks while the pages already serve
     yield
 
 
 app = FastAPI(title="DrishtiTrust", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+if (ROOT / "samples").exists():
+    app.mount("/samples", StaticFiles(directory=ROOT / "samples"), name="samples")
 tpl = Jinja2Templates(directory=ROOT / "templates")
 tpl.env.globals.update(ICDR=ICDR_NAMES)
 tpl.env.filters["fromjson"] = json.loads
 tpl.env.filters["ago"] = lambda t: f"{int((time.time() - t) // 60)} min ago" if time.time() - t < 3600 else f"{(time.time() - t) / 3600:.1f} h ago"
 
 _screener = None
-AUDIT_FRACTION = 0.02
+AUDIT_FRACTION = float(os.environ.get("DRISHTI_AUDIT_FRACTION", 0.02))  # share of auto-recalls sent for review
 STUDY_SET = ROOT / "study_set.csv"
 
 
+def _torch_checkpoints() -> bool:
+    """Whether the PyTorch grader named in configs/models.json is on disk
+    (checked without importing torch)."""
+    from drishti.config import RUNS
+    cfg = ROOT.parent / "configs" / "models.json"
+    name = json.loads(cfg.read_text()).get("grader") if cfg.exists() else None
+    if not name:
+        return False
+    args = RUNS / name / "args.json"
+    members = json.loads(args.read_text()).get("ensemble_of", [name]) if args.exists() else [name]
+    return all((RUNS / m / "best.pt").exists() for m in members)
+
+
 def screener():
+    """DRISHTI_BACKEND=python | matlab | auto (default). auto serves the
+    PyTorch checkpoints when they are on disk, else the MATLAB export."""
     global _screener
     if _screener is None:
-        from drishti.pipeline import Screener
-        _screener = Screener()
+        mode = os.environ.get("DRISHTI_BACKEND", "auto").lower()
+        from drishti import matlab_backend
+        if mode == "matlab" or (mode == "auto" and not _torch_checkpoints() and matlab_backend.available()):
+            _screener = matlab_backend.MatlabScreener()
+        else:
+            from drishti.pipeline import Screener
+            _screener = Screener()
     return _screener
 
 
@@ -68,40 +95,96 @@ def landing(request: Request):
     return tpl.TemplateResponse(request, "landing.html", {})
 
 
-@app.get("/portal/screener", response_class=HTMLResponse)
-@app.get("/screen", response_class=HTMLResponse)
-def portal_screener(request: Request):
-    s = screener()
-    return tpl.TemplateResponse(request, "portal_screener.html", {"missing": s.missing, "samples": _samples()})
-
-
-@app.get("/portal/doctor", response_class=HTMLResponse)
-def portal_doctor(request: Request):
-    return tpl.TemplateResponse(request, "portal_doctor.html", {"cases": db.review_queue()})
-
-
 def _samples():
     p = ROOT / "samples"
     return sorted(x.name for x in p.glob("*.jpg")) if p.exists() else []
 
 
+def _sample_label(name: str) -> str:
+    """Reference label of a bundled public-dataset photo, from its file name."""
+    stem = Path(name).stem
+    if stem.startswith("idrid_") and "_grade" in stem:
+        g = int(stem.split("_grade")[1][0])
+        return f"IDRiD · graded {g} ({ICDR_NAMES[g]})"
+    if stem.startswith("hrf_"):
+        return "HRF · diabetic retinopathy" if stem.endswith("_dr") else "HRF · healthy" if stem.endswith("_h") else "HRF"
+    return stem
+
+
+def _today_start() -> float:
+    t = time.localtime()
+    return time.mktime((t.tm_year, t.tm_mon, t.tm_mday, 0, 0, 0, 0, 0, -1))
+
+
+@app.get("/portal/screener", response_class=HTMLResponse)
+@app.get("/screen", response_class=HTMLResponse)
+def portal_screener(request: Request):
+    s = screener()
+    from drishti.quality.gate import load_cfg
+    since = _today_start()
+    with db.conn() as c:
+        today = [dict(r) for r in c.execute("SELECT id, token, created, site, patient, eye, outcome, final, urgent, p_ref "
+                                            "FROM cases WHERE study=0 AND created>=? ORDER BY id DESC LIMIT 40", (since,))]
+    refs = [dict(r) for r in db.referrals()][-12:][::-1]
+    d = db.dashboard()
+    return tpl.TemplateResponse(request, "portal_screener.html", {
+        "missing": s.missing, "backend": getattr(s, "backend", "python"),
+        "samples": [{"file": f, "label": _sample_label(f)} for f in _samples()],
+        "qcfg": load_cfg(), "cfg": referral_cfg(), "today": today, "refs": refs,
+        "queue_n": len(db.review_queue()), "review_median_s": d["review_seconds_median"], "reviews_n": d["reviews"]})
+
+
+@app.get("/portal/doctor", response_class=HTMLResponse)
+def portal_doctor(request: Request):
+    return tpl.TemplateResponse(request, "portal_doctor.html", {"cases": [dict(c) for c in db.review_queue()], "cfg": referral_cfg()})
+
+
+@app.get("/api/case/{case_id}")
+def api_case(case_id: int, lang: str | None = None, full: int = 0):
+    """Case status for the portals: the outcome, the specialist's decision once
+    made, the patient message in the chosen language and, with full=1, the
+    images and model outputs the review screen needs."""
+    c = db.get_case(case_id)
+    if c is None:
+        raise HTTPException(404)
+    res = json.loads(c["result_json"])
+    lang = lang or c["lang"]
+    q = [x["id"] for x in db.review_queue()]
+    with db.conn() as k:
+        rv = k.execute("SELECT reviewer, grade, dme, ungradable, ms, final FROM reviews WHERE case_id=? ORDER BY id DESC LIMIT 1",
+                       (case_id,)).fetchone()
+    out = {"id": case_id, "token": c["token"], "outcome": c["outcome"], "final": c["final"], "urgent": bool(c["urgent"]),
+           "audit": bool(c["audit"]), "queue_position": (q.index(case_id) + 1) if case_id in q else None, "queue_n": len(q),
+           "review": dict(rv) if rv else None,
+           "message": worker_message({**res, "outcome": c["final"] or res["outcome"]}, lang)}
+    if full:
+        out.update({k: res.get(k) for k in ("images", "grade", "grade_set", "rules", "reasons", "quality", "policy", "backend")})
+        out.update({"site": c["site"], "patient": c["patient"], "eye": c["eye"], "created": c["created"]})
+    return out
+
+
 @app.post("/api/screen")
 async def api_screen(file: UploadFile | None = File(None), sample: str = Form(""), site: str = Form("PHC-1"), patient: str = Form(""),
-                     eye: str = Form("right"), attempt: int = Form(1), lang: str = Form("en")):
+                     eye: str = Form("right"), attempt: int = Form(1), lang: str = Form("en"), simulate: str = Form("")):
     if sample:
-        data = (ROOT / "samples" / Path(sample).name).read_bytes()
+        p = ROOT / "samples" / Path(sample).name
+        if not p.exists():
+            raise HTTPException(404, f"no sample {Path(sample).name}")
+        data = p.read_bytes()
     elif file is not None:
         data = await file.read()
     else:
         raise HTTPException(400, "no image")
     rgb = _decode(data)
-    res = screener().screen(rgb, attempt=attempt, site=site, lang=lang)
+    if simulate == "blur":  # demo of the recapture path: an out-of-focus capture of the same eye
+        rgb = cv2.GaussianBlur(rgb, (0, 0), rgb.shape[1] / 120)
+    res = await run_in_threadpool(screener().screen, rgb, attempt=attempt, site=site, lang=lang)
     audit = res.get("outcome") == "recall" and random.random() < AUDIT_FRACTION
     case_id, tok = db.insert_case(res, site, patient, eye, attempt, lang, audit=audit)
     ref_id = None
     if res.get("outcome") == "refer":
         ref_id = db.create_referral(case_id, urgent=bool(res.get("urgent")))
-    return {"case_id": case_id, "token": tok, "outcome": res["outcome"], "referral_id": ref_id, "result": res}
+    return {"case_id": case_id, "token": tok, "outcome": res["outcome"], "referral_id": ref_id, "audit": audit, "result": res}
 
 
 @app.post("/api/referral/book")
