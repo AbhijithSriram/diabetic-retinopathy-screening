@@ -1,0 +1,14 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}Your eye check{% endblock %}
+{% block bodyclass %}patient{% endblock %}
+{% block body %}
+<header class="appbar appbar--patient">{{ logo(24) }}<b>Your eye check</b></header>
+<main class="patient__main">
+  <h1 class="h-screen">{{ L.en.bad_title }}</h1>
+  <p class="say">{{ L.en.bad_body }}</p>
+  <p lang="hi" class="say">{{ L.hi.bad_title }}। {{ L.hi.bad_body }}</p>
+  <p lang="ta" class="say">{{ L.ta.bad_title }}. {{ L.ta.bad_body }}</p>
+</main>
+<footer class="patient__foot">{{ L.en.disclaimer }}</footer>
+{% endblock %}

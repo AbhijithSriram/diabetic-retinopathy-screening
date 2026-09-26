@@ -77,8 +77,19 @@ to demonstrate for the MathWorks problem statement.
 python -m uvicorn app.main:app --port 8026
 ```
 
-Open <http://127.0.0.1:8026>. The screener portal is at `/screen`, and the
-doctor's review queue is at `/portal/doctor`.
+Open <http://127.0.0.1:8026> and pick a role:
+
+| Role | Page |
+|---|---|
+| Health worker (phone) | `/screen` |
+| Eye specialist | `/review` |
+| Referral coordinator | `/referrals` (SMS outbox at `/outbox`) |
+| Programme manager | `/dashboard` and `/evidence` |
+| Researcher | `/study` |
+
+Patients need no account: their status page is `/s/<token>` and the printable
+slip `/slip/<token>`, both linked from the health worker's booking screen.
+The capture screen has a "Use a sample photo" option for demonstrations.
 
 The app uses PyTorch when its model files are present, and MATLAB otherwise.
 To force one engine, set `DRISHTI_BACKEND` before starting:

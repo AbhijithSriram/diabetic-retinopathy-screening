@@ -1,0 +1,77 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}Review queue{% endblock %}
+{% block body %}
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(22) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><span>Review</span>
+  <span class="appbar__meta hide-phone"><span>Reviewer: <input id="reviewer" class="input input--inline" placeholder="your name" aria-label="Your name"></span> · {{ DISCLAIMER }}</span>
+</header>
+<main>
+  <div class="pagehead">
+    <div><h1 class="h-page">Review queue</h1><div class="muted" id="q-sub"></div></div>
+    <div class="stats hide-phone">
+      <div>Median today<br><b id="q-median">—</b></div>
+      <div>Reviewed today<br><b id="q-count">0</b></div>
+    </div>
+    <a href="#" class="btn btn--primary pagehead__action" id="btn-start">Start reviewing <span class="kbd kbd--on-primary">Enter</span></a>
+  </div>
+  <div class="page">
+    <table class="table table--card hide-phone" id="q-table">
+      <thead><tr><th style="width:40px">#</th><th>Priority</th><th>Case</th><th>Site · patient · eye</th><th>Why it is here</th><th>AI most likely</th><th class="r">P(ref)</th><th class="r">Waiting</th></tr></thead>
+      <tbody id="q-rows"></tbody>
+    </table>
+    <div class="cardlist show-phone" id="q-cards"></div>
+    <div class="empty-split" id="q-empty" hidden>
+      <div class="emptybox emptybox--tall"><b class="h-sub">No cases waiting</b><span class="muted">Cases arrive when the AI is unsure, finds lesions near the fovea, or picks a recall for the 2% audit. This page updates by itself.</span></div>
+      <div class="card stack-sm hide-phone"><b>Keys</b>
+        <div class="keys">
+          <span class="kbd">0 – 4</span><span>ICDR grade</span><span class="kbd">U</span><span>Ungradable</span><span class="kbd">D</span><span>Toggle macular oedema</span>
+          <span class="kbd">P L H</span><span>Photo · lesions · heatmap</span><span class="kbd">Enter</span><span>Confirm and open next case</span><span class="kbd">Esc</span><span>Back to queue (no decision saved)</span>
+        </div>
+      </div>
+    </div>
+    <p class="muted small" id="q-note">Waiting time turns amber after 24 h and red after {{ q.target_h }} h (target). The list updates without reloading.</p>
+  </div>
+</main>
+<div class="disclaimer show-phone">{{ DISCLAIMER }}</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let Q = {{ q|tojson }};
+const $ = s => document.querySelector(s);
+try { $('#reviewer').value = localStorage.getItem('dt.reviewer') || ''; } catch (e) { /* storage unavailable */ }
+$('#reviewer').addEventListener('change', e => { try { localStorage.setItem('dt.reviewer', e.target.value); } catch (err) { /* ignore */ } });
+
+function eyeName(e) { return e === 'right' ? 'Right' : e === 'left' ? 'Left' : DT.esc(e); }
+function render() {
+  const cs = Q.cases;
+  $('#q-sub').textContent = cs.length ? `${cs.length} case${cs.length > 1 ? 's' : ''} · oldest waiting ${Q.oldest_h} h of ${Q.target_h} h` : 'No cases waiting';
+  $('#q-median').textContent = Q.median_today_s != null ? `${Q.median_today_s} s` : '—';
+  $('#q-count').textContent = Q.reviewed_today;
+  $('#q-table').hidden = !cs.length; $('#q-cards').hidden = !cs.length; $('#q-empty').hidden = !!cs.length;
+  $('#btn-start').hidden = !cs.length;
+  if (cs.length) $('#btn-start').href = `/review/${cs[0].id}`;
+  $('#q-rows').innerHTML = cs.map((c, i) => `
+    <tr data-href="/review/${c.id}" class="${i === 0 ? 'row--next' : ''}">
+      <td>${i + 1}</td>
+      <td>${c.urgent ? `<span class="badge badge--urgent badge--sm"><span class="badge__shape"></span>Urgent</span>` : '<span class="muted">Routine</span>'}</td>
+      <td class="code"><a href="/review/${c.id}">${c.id}</a></td>
+      <td>${DT.esc(c.site)} · <span class="code">${DT.esc(c.patient || '—')}</span> · ${eyeName(c.eye)}</td>
+      <td>${c.audit ? '<span class="badge badge--audit badge--sm">Audit</span> ' : ''}${DT.esc(c.why)}</td>
+      <td>${DT.esc(c.most_likely || 'No AI grade')}</td>
+      <td class="r num">${c.p_ref != null ? c.p_ref.toFixed(3) : '—'}</td>
+      <td class="r num wait--${c.waiting.level}">${c.waiting.label}</td>
+    </tr>`).join('');
+  $('#q-cards').innerHTML = cs.map(c => `
+    <a class="qcard ${c.urgent ? 'qcard--urgent' : ''}" href="/review/${c.id}">
+      <span class="rowspread"><b class="code">${c.id}</b>${c.urgent ? '<span class="badge badge--urgent badge--sm">Urgent</span>' : c.audit ? '<span class="badge badge--audit badge--sm">Audit</span>' : ''}</span>
+      <span>${DT.esc(c.site)} · ${eyeName(c.eye)} · ${DT.esc(c.most_likely || 'No AI grade')}${c.p_ref != null ? ' · ' + c.p_ref.toFixed(3) : ''}</span>
+      <span class="small wait--${c.waiting.level} ${c.waiting.level ? '' : 'muted'}">${c.waiting.label} waiting</span>
+    </a>`).join('');
+  document.querySelectorAll('tr[data-href]').forEach(r => r.onclick = e => { if (!e.target.closest('a')) location = r.dataset.href; });
+}
+render();
+setInterval(async () => { try { Q = await DT.json('/api/queue'); render(); } catch (e) { /* keep last list */ } }, 5000);
+addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName !== 'INPUT' && Q.cases.length) location = `/review/${Q.cases[0].id}`; });
+</script>
+{% endblock %}

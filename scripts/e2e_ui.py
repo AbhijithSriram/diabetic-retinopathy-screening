@@ -1,14 +1,15 @@
 """End-to-end UI check: starts the web app on a throwaway database and clicks
-through every page and control with Playwright (Chromium).
+through every screen and state with Playwright (Chromium).
 
     python scripts/e2e_ui.py                    # PyTorch backend, headless
     python scripts/e2e_ui.py --backend matlab   # the MATLAB engine instead
     python scripts/e2e_ui.py --headed           # watch it
 
 Every automatic recall is sent to the audit queue (DRISHTI_AUDIT_FRACTION=1)
-so the doctor portal has several cases to work through. Prints PASS / FAIL per
-feature, saves a screenshot for each failure, and exits non-zero on any
-failure. Your own app/drishti.db is never touched.
+so the specialist has several cases to work through. A second server with an
+empty model folder checks the "grading is off" states. Prints PASS / FAIL
+per feature, saves a screenshot for each failure, and exits non-zero on any
+failure or browser error. Your own app/drishti.db is never touched.
 """
 from __future__ import annotations
 
@@ -29,7 +30,8 @@ from playwright.sync_api import expect, sync_playwright
 REPO = Path(__file__).resolve().parent.parent
 SAMPLES = REPO / "app" / "samples"
 BANNED = ["Aravind", "Sankara", "AIIMS", "510(k)", "ResNet", "DenseNet", "Tri-Ensemble", "92.5%", "64%",
-          "Zero Retention", "ABDM", "Quantized", "98.4%", "90.5%", "94.1", "Anita", "Rajesh", "800-DRISHTI"]
+          "Zero Retention", "ABDM", "Quantized", "98.4%", "90.5%", "Anita", "Rajesh", "800-DRISHTI"]
+DEVANAGARI, TAMIL = r"[ऀ-ॿ]", r"[஀-௿]"
 
 results: list[tuple[str, str, str]] = []
 console_errors: list[str] = []
@@ -41,12 +43,12 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def start_server(port: int, db: Path, backend: str) -> subprocess.Popen:
-    env = {**os.environ, "DRISHTI_DB": str(db), "DRISHTI_AUDIT_FRACTION": "1", "DRISHTI_BACKEND": backend}
+def start_server(port: int, db: Path, backend: str, extra_env: dict | None = None) -> subprocess.Popen:
+    env = {**os.environ, "DRISHTI_DB": str(db), "DRISHTI_AUDIT_FRACTION": "1", "DRISHTI_BACKEND": backend, **(extra_env or {})}
     log = open(db.with_suffix(".log"), "w")
     p = subprocess.Popen([sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(port)],
                          cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT)
-    for _ in range(120):
+    for _ in range(240):
         try:
             if urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=2).status == 200:
                 return p
@@ -87,454 +89,620 @@ def main():
     work = Path(tempfile.mkdtemp(prefix="drishti_e2e_"))
     shots = work / "failures"
     shots.mkdir()
-    port = free_port()
-    base = f"http://127.0.0.1:{port}"
+    port, port2 = free_port(), free_port()
+    base, base2 = f"http://127.0.0.1:{port}", f"http://127.0.0.1:{port2}"
     server = start_server(port, work / "e2e.db", a.backend)
-    slow = 300_000 if a.backend == "matlab" else 60_000  # MATLAB imports its networks on the first photo
+    empty_runs = work / "no_models"
+    empty_runs.mkdir()
+    server2 = start_server(port2, work / "nomodel.db", "python", {"DRISHTI_RUNS": str(empty_runs)})
+    slow = 300_000 if a.backend == "matlab" else 30_000  # MATLAB imports its networks on the first photo
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=not a.headed)
-            ctx = browser.new_context(viewport={"width": 1440, "height": 900})
-            ctx.set_default_timeout(slow)
-            page = ctx.new_page()
-            watch(page, "main")
-            state = {}
+            desk = browser.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
+            phone = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+            for c in (desk, phone):
+                c.set_default_timeout(slow)
+            page = desk.new_page()
+            watch(page, "desktop")
+            hw = phone.new_page()
+            watch(hw, "phone")
+            st = {}
 
-            def S(name, fn):
-                run(name, fn, page, shots)
+            def S(name, fn, pg=None):
+                run(name, fn, pg or page, shots)
 
-            # ------------------------------------------------------------ landing
-            def landing_loads():
+            # ================================================================ entry
+            def entry():
                 page.goto(base + "/")
-                txt = page.inner_text("body")
-                bad = [b for b in BANNED if b in txt or b in page.content()]
-                assert not bad, f"banned claims still on the page: {bad}"
-                link = page.locator("a[href='https://doi.org/10.1371/journal.pone.0270562']")
-                assert link.count() == 1, "SMART India citation link missing"
-                return "no false claims found; citation present"
-            S("Landing: loads, no removed claims, citation", landing_loads)
+                txt = page.content()
+                bad = [b for b in BANNED if b in txt]
+                assert not bad, f"removed claims are back: {bad}"
+                roles = {a_.get_attribute("data-role"): a_.get_attribute("href") for a_ in page.locator(".rolelist__item").all()}
+                assert roles == {"health-worker": "/screen", "specialist": "/review", "coordinator": "/referrals",
+                                 "programme": "/dashboard", "researcher": "/study"}, roles
+                page.click("text=About and evidence")
+                page.wait_for_url(re.compile(r"/about$"))
+                page.click("text=Validation results and simulated workload")
+                page.wait_for_url(re.compile(r"/evidence$"))
+                return "5 roles, about, evidence link"
+            S("Entry: role picker, about and evidence links", entry)
 
-            def landing_roc():
-                page.locator("#benchmarks").scroll_into_view_if_needed()
-                page.wait_for_function("() => typeof chartInstance !== 'undefined' && chartInstance")
-                page.click("#btn-chart-idrid")
-                lab = page.evaluate("chartInstance.data.datasets[0].label")
-                assert "IDRiD" in lab and "0.976" in lab, lab
-                page.click("#btn-chart-messidor")
-                lab2 = page.evaluate("chartInstance.data.datasets[0].label")
-                n = page.evaluate("chartInstance.data.datasets[0].data.length")
-                assert "0.982" in lab2 and n > 20, (lab2, n)
-                return f"{lab2}; {n} ROC points"
-            S("Landing: ROC toggle Messidor-2 / IDRiD", landing_roc)
+            def entry_phone():
+                hw.goto(base + "/")
+                assert hw.locator(".rolelist__item span").first.is_hidden(), "descriptions should hide on phones"
+                sw = hw.evaluate("document.documentElement.scrollWidth")
+                assert sw <= 392, f"sideways scroll {sw}px"
+                return "compact list, no sideways scroll"
+            S("Entry: phone layout", entry_phone, hw)
 
-            def landing_cta():
-                page.locator("a:has-text('Enter Field Screener Portal')").first.click()
-                page.wait_for_url(re.compile(r"/portal/screener$"))
-                return page.url
-            S("Landing: 'Enter Field Screener Portal' button", landing_cta)
+            # ================================================================ health worker (phone)
+            def hw_wait_result():
+                hw.wait_for_function("() => ['result','retake','error'].includes(document.body.dataset.view)")
 
-            # ------------------------------------------------------------ screener
-            def wait_done():
-                page.wait_for_function("() => !document.getElementById('btn-run-ai').disabled && "
-                                       "!document.getElementById('quality-status-badge').textContent.includes('Checking')")
+            def hw_first_use():
+                hw.goto(base + "/screen")
+                expect(hw.locator("#intro")).to_be_visible()
+                expect(hw.locator("#today-list")).to_contain_text("No patients screened today")
+                assert hw.inner_text("#btn-start") == "Start screening"
+                return "intro, empty day, Start screening"
+            S("Health worker: first use, empty day (A1)", hw_first_use, hw)
 
-            def case_id():
-                return page.evaluate("activeCaseId")
+            def hw_patient_form():
+                hw.click("#btn-start")
+                expect(hw.locator("[data-screen=patient]")).to_be_visible()
+                hw.click("#btn-continue")
+                expect(hw.locator("#f-patient-err")).to_be_visible()
+                hw.fill("#f-patient", "e2e-001")
+                hw.select_option("#f-site", "PHC-2")
+                hw.click("#f-lang [data-lang=hi]")
+                hw.click("#btn-continue")
+                expect(hw.locator("[data-screen=capture]")).to_be_visible()
+                assert hw.inner_text("[data-screen=capture] [data-bind=patient]") == "E2E-001"
+                assert "Right eye" in hw.inner_text("#eye-stepper")
+                return "code required; code upper-cased; site and language kept"
+            S("Health worker: new patient form and validation (A3)", hw_patient_form, hw)
 
-            def scr_loads():
-                page.goto(base + "/screen")
-                eng = page.inner_text("header")
-                assert "AI engine:" in eng, "engine label missing"
-                assert page.inner_text("#camp-screened-num").strip() == "0"
-                assert "No patients screened today" in page.inner_text("#roster-list-desktop")
-                return re.search(r"AI engine: \w+", eng).group(0)
-            S("Screener: loads with live (empty) roster and engine label", scr_loads)
+            def hw_capture():
+                expect(hw.locator("#capture-empty")).to_be_visible()
+                hw.click("[data-act=samples]")
+                expect(hw.locator("#sample-sheet")).to_be_visible()
+                hw.click("[data-sample='idrid_test_grade2_009.jpg']:not([data-simulate])")
+                expect(hw.locator("#capture-img")).to_be_visible()
+                assert "Attempt 1 of 3" in hw.inner_text("#capture-attempt")
+                hw.click("[data-act=take-again]")
+                expect(hw.locator("#capture-empty")).to_be_visible()
+                hw.click("[data-act=samples]")
+                hw.click("[data-sample='idrid_test_grade2_009.jpg']:not([data-simulate])")
+                return "sample sheet, photo preview, take again"
+            S("Health worker: capture, sample photo, take again (A4/A5)", hw_capture, hw)
 
-            def scr_refer():
-                page.fill("#patient-id", "E2E-REFER")
-                page.click("[data-sample='idrid_test_grade2_009.jpg']")
-                wait_done()
-                head = page.inner_text("#triage-headline")
-                assert "REFERRAL" in head, head
-                assert "P(REFERABLE DR)" in page.inner_text("#triage-kicker")
-                vals = [page.inner_text(f"#val-{k}") for k in ("fov", "completeness", "median", "clipped", "evenness", "focus")]
-                assert all(v.strip() not in ("", "–") for v in vals), vals
-                assert page.inner_text("#conformal-set-text").startswith("[")
-                assert page.is_visible("#referral-booking-card")
-                state["refer_case"] = case_id()
-                return f"{head}; metrics {vals}"
-            S("Screener: public sample -> real result, metrics, referral card", scr_refer)
+            def hw_result_urgent():
+                hw.click("#btn-check")
+                expect(hw.locator("[data-screen=checking]")).to_be_visible(timeout=5000)
+                hw_wait_result()
+                kind = hw.get_attribute("#r-banner", "data-kind")
+                assert kind == "urgent", kind
+                assert re.search(DEVANAGARI, hw.inner_text("#r-say")), "message should start in Hindi"
+                assert re.search(DEVANAGARI, hw.inner_text("#disclaimer")), "Hindi disclaimer line missing"
+                hw.click("#r-lang [data-lang=en]")
+                hw.wait_for_function("() => /Serious signs/.test(document.getElementById('r-say').textContent)")
+                hw.click("#r-lang [data-lang=ta]")
+                hw.wait_for_function(f"() => /{TAMIL}/.test(document.getElementById('r-say').textContent)")
+                hw.click("#r-lang [data-lang=en]")
+                assert hw.inner_text("#btn-result-main") == "Book urgent visit"
+                assert "btn--danger" in hw.get_attribute("#btn-result-main", "class")
+                return f"{hw.inner_text('#r-title')}; Hindi, Tamil, English messages"
+            S("Health worker: result, urgent refer, three languages (C6/F1/F2)", hw_result_urgent, hw)
 
-            def scr_layers():
-                srcs = {}
-                for layer in ("unet", "gradcam", "redfree", "fundus"):
-                    page.click(f"#layer-btn-{layer}")
-                    srcs[layer] = page.get_attribute("#preview-img", "src") or ""
-                    assert page.get_attribute(f"#layer-btn-{layer}", "class").count("active"), layer
-                assert len(set(srcs.values())) == 4, "layers did not change the image"
-                page.click("#layer-btn-unet")
-                assert page.is_visible("#lesion-telemetry-row")
-                counts = {k: page.inner_text(f"#cnt-{k}") for k in ("MA", "HE", "EX", "SE")}
-                assert all(c.isdigit() for c in counts.values()), counts
-                page.click("#layer-btn-fundus")
-                return f"4 distinct images; lesion counts {counts}"
-            S("Screener: Colour / U-Net / Grad-CAM / Red-free layers", scr_layers)
-
-            def scr_loupe():
-                box = page.locator("#viewport-box").bounding_box()
-                page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-                page.wait_for_function("() => getComputedStyle(document.getElementById('magnifier-loupe')).display === 'block'")
-                page.mouse.move(5, 5)
-                return "magnifier appears on hover"
-            S("Screener: hover magnifier", scr_loupe)
-
-            def scr_languages():
-                out = {}
-                for lang, rx in (("Tamil", r"[\u0B80-\u0BFF]"), ("Hindi", r"[\u0900-\u097F]"), ("English", r"^[\x00-\x7F\"]+$")):
-                    page.locator(".cockpit-chip", has_text=lang).first.click()
-                    page.wait_for_function(f"() => /{rx}/.test(document.getElementById('counseling-script-text').textContent)")
-                    out[lang] = page.inner_text("#counseling-script-text")[:40]
-                return str(out)
-            S("Screener: counselling text in Tamil / Hindi / English", scr_languages)
-
-            def scr_speak():
-                n = len(console_errors)
-                page.locator("button", has_text="Speak to Patient").click()
-                time.sleep(0.5)
-                assert len(console_errors) == n, console_errors[n:]
-                return "no errors (audio not checked headless)"
-            S("Screener: 'Speak to Patient' button", scr_speak)
-
-            def scr_book():
-                page.fill("#referral-appointment-date", time.strftime("%Y-%m-%d", time.localtime(time.time() + 5 * 86400)))
-                page.click("#facility-card-2")
-                page.click("#btn-confirm-referral")
-                expect(page.locator("#booking-confirmation-msg")).to_be_visible()
-                ref = page.inner_text("#booking-ref-num")
-                assert re.fullmatch(r"REF-\d+", ref), ref
-                state["ref_date"] = page.input_value("#referral-appointment-date")
-                return f"{ref}: {page.inner_text('#booking-confirmed-text')}"
-            S("Screener: record referral & appointment", scr_book)
-
-            def scr_slip():
-                with ctx.expect_page() as pinfo:
-                    page.click("#btn-print-slip")
-                slip = pinfo.value
-                slip.wait_for_load_state()
-                t = slip.inner_text("body")
-                slip.close()
-                assert "/slip/" in slip.url and ("referral" in t.lower() or "Referral" in t), t[:200]
-                return slip.url.split(base)[1]
-            S("Screener: print slip opens the slip", scr_slip)
-
-            def scr_status():
-                with ctx.expect_page() as pinfo:
-                    page.locator("button", has_text="Patient status link").click()
-                st = pinfo.value
-                st.wait_for_load_state()
-                ok = "/s/" in st.url and len(st.inner_text("body")) > 50
-                u = st.url
-                st.close()
-                assert ok, u
-                return u.split(base)[1]
-            S("Screener: patient status link opens /s/<token>", scr_status)
-
-            def scr_left_eye():
-                pid = page.input_value("#patient-id")
-                page.locator("#next-action-label").click()
-                assert "active" in page.get_attribute("#eye-tab-left", "class")
-                assert page.is_visible("#drop-prompt")
-                page.click("[data-sample='idrid_test_grade0_030.jpg']")
-                wait_done()
-                head = page.inner_text("#triage-headline")
-                assert "ROUTINE" in head, head
-                assert "audit" in page.inner_text("#action-detail-text").lower(), "audit note missing"
-                assert page.input_value("#patient-id") == pid
-                eye = page.evaluate("currentExaminedEye")
-                page.locator("#next-action-label").click()  # complete & next patient
-                assert page.input_value("#patient-id") != pid, "no new patient ID"
-                assert "active" in page.get_attribute("#eye-tab-right", "class")
-                return f"left eye screened ({eye}): {head}; then new patient"
-            S("Screener: left eye, audit note, then next patient", scr_left_eye)
-
-            def scr_upload():
-                page.set_input_files("#file-input", str(SAMPLES / "hrf_02_h.jpg"))
-                wait_done()
-                head = page.inner_text("#triage-headline")
-                assert page.inner_text("#preview-filename-text") == "hrf_02_h.jpg"
-                return head
-            S("Screener: upload your own photo", scr_upload)
-
-            def scr_bad_upload():
-                page.set_input_files("#file-input", files=[{"name": "notes.txt", "mimeType": "text/plain", "buffer": b"not an image"}])
-                wait_done()
-                badge = page.inner_text("#quality-status-badge")
-                assert badge == "Error", badge
-                assert page.is_hidden("#result-card"), "a result was shown for a non-image"
-                return page.inner_text("#quality-alert-body")[:80]
-            S("Screener: non-image upload shows an error, no fake result", scr_bad_upload)
-
-            def scr_blur():
-                page.keyboard.press("Alt+n")
-                page.click("[data-sample='blur']")
-                wait_done()
-                steps = [page.inner_text("#attempt-indicator-text")]
-                for _ in range(2):
-                    page.click("#btn-run-ai")
-                    wait_done()
-                    steps.append(page.inner_text("#attempt-indicator-text"))
-                head = page.inner_text("#triage-headline")
-                assert "UNGRADABLE" in head, (head, steps)
-                assert page.input_value("#referral-doctor-select").startswith("Cataract")
-                assert "Blurry" in page.inner_text("#quality-alert-body")
-                return f"{steps} -> {head}"
-            S("Screener: out-of-focus retake x3 -> ungradable referral", scr_blur)
-
-            def scr_alt_keys():
-                page.keyboard.press("Alt+n")
-                assert page.is_visible("#drop-prompt")
-                assert page.inner_text("#attempt-indicator-text") == "Attempt 1 of 3"
-                page.click("[data-sample='hrf_05_dr.jpg']")
-                wait_done()
-                first = case_id()
-                page.keyboard.press("Alt+r")
-                page.wait_for_function(f"() => activeCaseId && activeCaseId !== {first}")
-                wait_done()
-                return f"Alt+N reset; Alt+R re-ran case {first} as {case_id()}"
-            S("Screener: Alt+N new patient, Alt+R re-run", scr_alt_keys)
-
-            def scr_review():
-                page.keyboard.press("Alt+n")
-                page.fill("#patient-id", "E2E-REVIEW")
-                page.click("[data-sample='idrid_test_grade4_002.jpg']")
-                wait_done()
-                assert page.is_visible("#telereview-panel")
-                page.wait_for_function("() => /Queue position: \\d+ of \\d+/.test(document.getElementById('telereview-position').textContent)")
-                state["review_case"] = case_id()
-                return page.inner_text("#telereview-position")
-            S("Screener: uncertain photo -> tele-review panel with queue position", scr_review)
-
-            def scr_roster():
-                page.goto(base + "/screen")
-                n = int(page.inner_text("#camp-screened-num"))
-                items = page.locator("#roster-list-desktop .roster-item")
-                assert items.count() == n and n >= 8, (n, items.count())
-                page.fill("#roster-search-input", "E2E-REVIEW")
-                page.keyboard.up("W")  # keyup triggers the filter
-                vis = page.locator("#roster-list-desktop .roster-item:visible").count()
-                assert vis >= 1 and vis < n, vis
-                page.fill("#roster-search-input", "")
-                page.locator("#roster-search-input").press("Backspace")
-                page.locator("button", has_text=re.compile(r"^Recall \(")).click()
-                cats = page.eval_on_selector_all("#roster-list-desktop .roster-item", "els => els.filter(e => e.style.display !== 'none').map(e => e.dataset.cat)")
-                assert cats and set(cats) == {"recall"}, cats
-                page.click("#sidebar-tab-referrals")
-                refs = page.inner_text("#sidebar-panel-referrals")
-                assert "State:" in refs and "booked" in refs, refs[:200]
-                return f"{n} cases today; search, Recall filter and referrals tab work"
-            S("Screener: roster count, search, filter, referrals tab", scr_roster)
-
-            def scr_mobile():
-                m = ctx.new_page()
-                watch(m, "mobile")
-                m.set_viewport_size({"width": 390, "height": 844})
-                m.goto(base + "/screen")
-                sw = m.evaluate("document.documentElement.scrollWidth")
-                m.click("button[title=\"Open Today's Patient Roster\"]")
-                expect(m.locator("#cockpit-roster-offcanvas")).to_be_visible()
-                n = m.locator("#cockpit-roster-offcanvas a[href^='/case/']").count()
-                m.close()
-                assert sw <= 392, f"horizontal scroll: page is {sw}px wide"
-                assert n >= 1
-                return f"no sideways scroll at 390 px; drawer lists {n} cases"
-            S("Screener: phone width layout and roster drawer", scr_mobile)
-
-            # ------------------------------------------------------------ doctor
-            def doc_loads():
-                page.goto(base + "/portal/doctor")
-                cards = page.locator(".queue-card")
-                assert cards.count() >= 4, cards.count()
-                page.wait_for_function("() => caseData && caseData.images")
-                assert page.get_attribute("#cockpit-fundus-img", "src").startswith("data:image")
-                assert "Audit sample" in page.inner_text(".queue-col")
-                return f"{cards.count()} queued cases incl. audit samples; first case loaded"
-            S("Doctor: real queue and first case", doc_loads)
-
-            def doc_layers():
+            def hw_details():
+                hw.click("#btn-details")
+                expect(hw.locator("[data-screen=details]")).to_be_visible()
                 srcs = set()
-                for layer in ("raw", "gradcam", "lesion"):
-                    page.click(f"#btn-layer-{layer}")
-                    srcs.add(page.get_attribute("#cockpit-fundus-img", "src"))
-                assert len(srcs) == 3
-                assert "P(referable DR)" in page.inner_text("#ai-summary")
-                assert page.locator("#quadrant-grid > div").count() == 4
-                return "3 distinct layers; summary and quadrants filled"
-            S("Doctor: image layers, AI summary, quadrant counts", doc_layers)
+                for l in ("photo", "lesions", "gradcam"):
+                    hw.click(f"#d-layers [data-layer={l}]")
+                    srcs.add(hw.get_attribute("#d-img", "src"))
+                assert len(srcs) == 3, "layers did not change the image"
+                counts = hw.inner_text("#d-counts")
+                assert re.search(r"\d", counts), counts
+                pref = hw.inner_text("#d-pref")
+                hw.click("[data-screen=details] [data-act=back]")
+                expect(hw.locator("[data-screen=result]")).to_be_visible()
+                return f"3 layers; P(ref) {pref}; counts {counts.split()}"
+            S("Health worker: details with layers (C7)", hw_details, hw)
 
-            def doc_needs_grade():
-                page.keyboard.press("Enter")
-                assert "Choose a grade" in page.inner_text("#sign-status")
-                return "sign-off blocked until a grade is chosen"
-            S("Doctor: cannot sign without a grade", doc_needs_grade)
+            def hw_book():
+                hw.click("#btn-result-main")
+                expect(hw.locator("[data-screen=book]")).to_be_visible()
+                assert "Urgent refer" in hw.inner_text("#b-badge")
+                hw.click("#b-facilities .choice >> nth=1")
+                hw.click("[data-act=other-date]")
+                hw.fill("#b-date-other", time.strftime("%Y-%m-%d", time.localtime(time.time() + 4 * 86400)))
+                hw.check("#b-transit")
+                hw.click("#btn-book")
+                expect(hw.locator("[data-screen=booked]")).to_be_visible()
+                st["token_url"] = hw.get_attribute("#k-link", "href")
+                st["slip_url"] = hw.get_attribute("#btn-slip", "href")
+                assert "Transport requested" in hw.inner_text("#k-help")
+                assert hw.inner_text("#btn-after-booking") == "Next: left eye"
+                return f"{hw.inner_text('#k-where').splitlines()[0]}, {hw.inner_text('#k-when')}"
+            S("Health worker: book hospital and date (D1/D2)", hw_book, hw)
 
-            def doc_keys():
-                first = page.evaluate("caseId")
-                page.keyboard.press("u")
-                assert "selected" in page.get_attribute("#g-u", "class")
-                before = page.is_checked("#chk-dme")
-                page.keyboard.press("d")
-                assert page.is_checked("#chk-dme") != before
-                page.keyboard.press("Enter")
-                page.wait_for_function("() => document.getElementById('sign-status').textContent.startsWith('Saved')")
-                msg = page.inner_text("#sign-status")
-                assert "referral created" in msg, msg
-                page.wait_for_function(f"() => caseId !== {first} && caseData")
-                return f"U + D + Enter on case {first}: {msg}; advanced to {page.evaluate('caseId')}"
-            S("Doctor: keys U / D / Enter, auto-advance", doc_keys)
+            def hw_slip_and_status():
+                p = phone.new_page()
+                p.goto(base + st["slip_url"])
+                assert p.locator(".slip__qr svg").count() == 1, "no QR code"
+                txt = p.inner_text(".slip")
+                assert "URGENT" in txt and re.search(DEVANAGARI, txt) and re.search(TAMIL, txt), "slip should be trilingual"
+                p.goto(base + st["token_url"])
+                assert re.search(DEVANAGARI, p.inner_text(".banner__title")), "opens in the language chosen at screening (Hindi)"
+                p.goto(base + st["token_url"] + "?lang=en")
+                assert p.get_attribute(".banner", "data-kind") == "urgent"
+                assert "Your appointment" in p.inner_text("main")
+                p.goto(base + st["token_url"] + "?lang=ta")
+                assert re.search(TAMIL, p.inner_text(".banner__title"))
+                p.close()
+                return "QR slip in 3 languages; status page with appointment; Tamil"
+            S("Patient: slip and status page after booking (P1/P3/P7)", hw_slip_and_status, hw)
 
-            def doc_recall():
-                page.click("#g-1")
-                page.uncheck("#chk-dme")
-                page.click("#btn-sign")
-                page.wait_for_function("() => document.getElementById('sign-status').textContent.startsWith('Saved')")
-                msg = page.inner_text("#sign-status")
-                assert "routine recall" in msg, msg
-                page.wait_for_function("() => caseData && !document.getElementById('sign-status').textContent")
-                return msg
-            S("Doctor: grade 1 -> routine recall", doc_recall)
+            def hw_left_review():
+                hw.click("#btn-after-booking")
+                expect(hw.locator("[data-screen=capture]")).to_be_visible()
+                assert "Right eye · done" in hw.inner_text("#eye-stepper")
+                hw.click("[data-act=samples]")
+                hw.click("[data-sample='idrid_test_grade4_002.jpg']")
+                hw.click("#btn-check")
+                hw_wait_result()
+                assert hw.get_attribute("#r-banner", "data-kind") == "review"
+                expect(hw.locator("#r-wait")).to_be_visible()
+                assert re.search(r"in line|in the queue", hw.inner_text("#r-wait-text"))
+                assert hw.inner_text("#btn-result-main") == "Finish patient"
+                expect(hw.locator("#result-hint")).to_be_visible()
+                st["review_case"] = hw.evaluate("S.current.id")
+                hw.click("#btn-result-main")
+                expect(hw.locator("[data-screen=today]")).to_be_visible()
+                hw.wait_for_function("() => /E2E-001/.test(document.getElementById('today-list').textContent)")
+                txt = hw.inner_text("#today-list")
+                assert "Waiting for eye doctor" in txt and "booked" in txt, txt
+                return "left eye sent to review with its queue position; today list shows both eyes"
+            S("Health worker: left eye, review pending, finish (C3/A2)", hw_left_review, hw)
 
-            def doc_refer_with_date():
-                cid = page.evaluate("caseId")
-                page.click("#g-3")
-                date = time.strftime("%Y-%m-%d", time.localtime(time.time() + 3 * 86400))
-                page.fill("#ref-date", date)
-                page.click("#btn-sign")
-                page.wait_for_function("() => document.getElementById('sign-status').textContent.startsWith('Saved')")
-                r = page.request.get(f"{base}/referrals").text()
-                assert date in r, "appointment date not on the referral tracker"
-                state["doc_ref_case"] = cid
-                return f"case {cid}: grade 3, booked for {date}"
-            S("Doctor: grade 3 with appointment date -> booked referral", doc_refer_with_date)
+            def hw_retakes():
+                hw.click("#btn-start")
+                hw.fill("#f-patient", "E2E-002")
+                hw.click("#btn-continue")
+                hw.click("[data-act=samples]")
+                hw.click("[data-sample][data-simulate=blur]")
+                seen = []
+                for i in range(3):
+                    hw.click("#btn-check")
+                    hw_wait_result()
+                    scr = hw.evaluate("document.body.dataset.view")
+                    if scr == "retake":
+                        seen.append(hw.inner_text("#retake-attempt"))
+                        assert "Blurry" in hw.inner_text("#problems")
+                        hw.click("#btn-retake")
+                        hw.click("[data-act=samples]")
+                        hw.click("[data-sample][data-simulate=blur]")
+                assert seen == ["1 of 3", "2 of 3"], seen
+                assert hw.get_attribute("#r-banner", "data-kind") == "ungradable"
+                assert hw.inner_text("#btn-result-main") == "Choose hospital and date"
+                return f"retake {seen} then {hw.inner_text('#r-title')}"
+            S("Health worker: retake 1 and 2 of 3, then ungradable (B3/B4/B5)", hw_retakes, hw)
 
-            def doc_reviewer_name():
-                page.fill("#reviewer-name", "Dr E2E")
-                page.dispatch_event("#reviewer-name", "change")
-                page.reload()
-                v = page.input_value("#reviewer-name")
-                assert v == "Dr E2E", v
-                return "remembered after reload"
-            S("Doctor: reviewer name remembered", doc_reviewer_name)
+            def hw_recall_audit():
+                hw.click("#btn-result-main")
+                hw.click("#btn-book")  # default hospital and date
+                expect(hw.locator("[data-screen=booked]")).to_be_visible()
+                hw.click("#btn-after-booking")
+                hw.click("[data-act=samples]")
+                hw.click("[data-sample='idrid_test_grade0_030.jpg']")
+                hw.click("#btn-check")
+                hw_wait_result()
+                assert hw.get_attribute("#r-banner", "data-kind") == "recall"
+                expect(hw.locator("#r-audit")).to_be_visible()
+                return "ungradable booked; recall with the audit note"
+            S("Health worker: recall picked for audit (C1/C2)", hw_recall_audit, hw)
 
-            def screener_sees_decision():
-                cid = state.get("review_case")
-                j = page.request.get(f"{base}/api/case/{cid}").json()
-                if not j["final"]:  # sign it now if the queue order left it untouched
-                    page.request.post(f"{base}/api/review/{cid}", data={"grade": 4, "ms": 9000, "reviewer": "e2e"})
-                p2 = ctx.new_page()
-                p2.goto(base + "/screen")
-                p2.evaluate(f"activeCaseId = {cid}; document.getElementById('telereview-panel').classList.remove('hidden'); startPolling();")
-                p2.wait_for_function("() => document.getElementById('telereview-position').textContent === 'Reviewed'")
-                t = p2.inner_text("#telereview-text")
-                p2.close()
-                return t
-            S("Screener: picks up the specialist's decision", screener_sees_decision)
+            def hw_upload_and_bad_file():
+                hw.click("#btn-result-main")  # finish
+                hw.click("#btn-start")
+                hw.fill("#f-patient", "E2E-003")
+                hw.click("#btn-continue")
+                hw.set_input_files("#in-files", files=[{"name": "notes.txt", "mimeType": "text/plain", "buffer": b"not an image"}])
+                hw.click("#btn-check")
+                hw_wait_result()
+                assert hw.evaluate("document.body.dataset.view") == "error"
+                assert "not a photo" in hw.inner_text("#e-title")
+                hw.click("[data-screen=error] [data-act=check]")  # try again: same file, same answer
+                hw_wait_result()
+                assert hw.evaluate("document.body.dataset.view") == "error"
+                hw.evaluate("S.stack = ['capture']")
+                hw.evaluate("back()")
+                hw.set_input_files("#in-files", str(SAMPLES / "hrf_02_h.jpg"))
+                hw.click("#btn-check")
+                hw_wait_result()
+                return f"non-image -> error, no outcome; own photo -> {hw.inner_text('#r-title')}"
+            S("Health worker: bad file error, then own photo (E3)", hw_upload_and_bad_file, hw)
 
-            # ------------------------------------------------------------ classic pages
-            def classic_review():
+            def hw_network_error():
+                hw.click("#btn-result-main")
+                hw.click("[data-act=samples]")
+                hw.click("[data-sample='hrf_05_dr.jpg']")
+                hw.route("**/api/screen", lambda r: r.abort())
+                hw.click("#btn-check")
+                hw_wait_result()
+                txt = hw.inner_text("[data-screen=error]")
+                hw.unroute("**/api/screen")
+                assert "No result received" in txt and "Do not tell the patient a result" in txt
+                assert hw.locator("[data-screen=error] .thumb img").get_attribute("src"), "photo should be kept"
+                hw.click("[data-screen=error] [data-act=check]")
+                hw_wait_result()
+                return f"offline -> no outcome shown; retry -> {hw.inner_text('#r-title')}"
+            S("Health worker: network error keeps the photo, retry works (E2)", hw_network_error, hw)
+
+            def hw_warmup_and_cancel():
+                hw.click("#btn-result-main")
+                hw.click("#btn-start")
+                hw.fill("#f-patient", "E2E-004")
+                hw.click("#btn-continue")
+                hw.click("[data-act=samples]")
+                hw.click("[data-sample='hrf_02_h.jpg']")
+
+                def slow_route(r):
+                    time.sleep(9.5)
+                    r.continue_()
+                hw.route("**/api/screen", slow_route)
+                hw.click("#btn-check")
+                expect(hw.locator("#warmup")).to_be_visible(timeout=15000)
+                el = hw.inner_text("#warm-elapsed")
+                hw.click("[data-act=cancel-check]")
+                expect(hw.locator("[data-screen=capture]")).to_be_visible(timeout=15000)
+                hw.unroute("**/api/screen")
+                return f"slow check shows the start-up timer ({el}); cancel returns to capture"
+            S("Health worker: warm-up timer and cancel (B1/B2)", hw_warmup_and_cancel, hw)
+
+            def hw_decision_arrives():
+                cid = st["review_case"]
+                hw.evaluate("show('today', false)")
+                page.request.post(f"{base}/api/review/{cid}", data={"grade": 2, "dme": 0, "ms": 12000, "reviewer": "e2e"})
+                expect(hw.locator(".toast")).to_contain_text("answer", timeout=20000)
+                hw.locator(".toast button").first.click()
+                expect(hw.locator("[data-screen=result]")).to_be_visible()
+                expect(hw.locator("#r-decision")).to_be_visible()
+                txt = hw.inner_text("#r-decision-text")
+                assert hw.get_attribute("#r-banner", "data-kind") == "refer"
+                return f"toast, then result shows the decision: {txt}"
+            S("Health worker: specialist decision arrives as a toast (C4)", hw_decision_arrives, hw)
+
+            def hw_desktop():
+                p = desk.new_page()
+                watch(p, "hw-desktop")
+                p.goto(base + "/screen")
+                expect(p.locator(".hw__aside")).to_be_visible()
+                p.wait_for_function("() => document.querySelectorAll('#today-aside .patientcard').length >= 3")
+                n = p.locator("#today-aside .patientcard").count()
+                p.locator("#today-aside .eyerow[data-case]").first.click()
+                expect(p.locator("[data-screen=result]")).to_be_visible()
+                p.close()
+                return f"today list beside the screen ({n} patients); opens a case"
+            S("Health worker: desktop layout with today list (G1)", hw_desktop)
+
+            # ================================================================ grading off (second server)
+            def grading_off():
+                p = phone.new_page()
+                p.goto(base2 + "/screen")
+                p.click("#btn-start")
+                p.fill("#f-patient", "NM-1")
+                p.click("#btn-continue")
+                expect(p.locator(".strip--review")).to_contain_text("Automatic grading is off")
+                p.click("[data-act=samples]")
+                p.click("[data-sample='idrid_test_grade2_009.jpg']:not([data-simulate])")
+                p.click("#btn-check")
+                p.wait_for_function("() => document.body.dataset.view === 'result'")
+                kind = p.get_attribute("#r-banner", "data-kind")
+                cid = p.evaluate("S.current.id")
+                d = desk.new_page()
+                d.goto(f"{base2}/review/{cid}")
+                expect(d.locator("#no-ai")).to_be_visible()
+                p.close(); d.close()
+                assert kind == "review", kind
+                return "banner on capture; photo goes to review; specialist sees 'No AI grade'"
+            S("Models missing: banner and 'No AI grade' (E1)", grading_off)
+
+            # ================================================================ specialist
+            def spec_queue():
                 page.goto(base + "/review")
-                links = page.locator("a[href^='/review/']")
-                if links.count() == 0:
-                    return "queue empty (all signed in the doctor portal)"
-                links.first.click()
+                rows = page.locator("#q-rows tr")
+                n = rows.count()
+                assert n >= 3, n
+                assert page.locator("#q-cards").is_hidden(), "phone cards should not show on desktop"
+                txt = page.inner_text("#q-rows")
+                assert "Audit" in txt, "audit samples missing"
+                page.fill("#reviewer", "Dr E2E")
+                page.dispatch_event("#reviewer", "change")
+                page.locator("h1").click()
+                page.keyboard.press("Enter")
                 page.wait_for_url(re.compile(r"/review/\d+"))
-                for tab in ("photo", "gradcam", "lesions"):
-                    if page.locator(f"#tab-{tab}").count():
-                        page.click(f"#tab-{tab}")
-                page.click("#btn-grade-2")
-                page.wait_for_function("() => document.getElementById('done').textContent.includes('Saved')")
-                return page.inner_text("#done")
-            S("Classic review page: tabs and grading", classic_review)
+                page.wait_for_function("() => typeof C !== 'undefined' && C && C.id")
+                return f"{n} queued cases incl. audit; Enter opens the first"
+            S("Specialist: queue, Enter starts reviewing (S1)", spec_queue)
 
-            def referral_tracker():
+            def spec_layers_zoom():
+                srcs = set()
+                for k in ("l", "h", "p"):
+                    page.keyboard.press(k)
+                    srcs.add(page.get_attribute("#img", "src"))
+                assert len(srcs) == 3
+                box = page.locator("#viewer").bounding_box()
+                page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+                page.mouse.wheel(0, -400)
+                tf = page.evaluate("document.getElementById('img').style.transform")
+                assert "scale(1)" not in tf, tf
+                page.dblclick("#viewer")
+                assert "scale(1)" in page.evaluate("document.getElementById('img').style.transform")
+                return "P/L/H switch layers; wheel zooms; double-click resets"
+            S("Specialist: layers by key, zoom and reset (S2)", spec_layers_zoom)
+
+            def spec_preview_and_save():
+                assert page.is_disabled("#confirm")
+                page.keyboard.press("Enter")  # nothing to save yet
+                prev = {}
+                for k, want in (("2", "Refer"), ("3", "Urgent refer"), ("u", "Ungradable"), ("1", "Recall")):
+                    page.keyboard.press(k)
+                    prev[k] = page.inner_text("#preview")
+                    assert prev[k].startswith(want), (k, prev[k])
+                page.keyboard.press("d")
+                assert page.inner_text("#preview").startswith("Urgent refer"), "oedema should make it urgent"
+                page.keyboard.press("d")
+                page.keyboard.press("3")
+                page.fill("#appt", time.strftime("%Y-%m-%d", time.localtime(time.time() + 6 * 86400)))
+                first = page.evaluate("C.id")
+                page.locator("#img").click()
+                page.keyboard.press("Enter")
+                expect(page.locator(".toast").last).to_contain_text(f"Saved case {first}")
+                page.wait_for_function(f"() => C && C.id !== {first}")
+                refs = page.request.get(base + "/api/referrals").json()["referrals"]
+                r = next(x for x in refs if x["case_id"] == first)
+                assert r["appointment"], "appointment not booked"
+                return f"previews {list(prev.values())}; case {first} saved, booked {r['appointment']}, next case opened"
+            S("Specialist: preview, confirm with appointment, auto-advance", spec_preview_and_save)
+
+            def spec_escape():
+                page.keyboard.press("Escape")
+                page.wait_for_url(re.compile(r"/review$"))
+                return "Esc returns to the queue"
+            S("Specialist: Esc back to queue", spec_escape)
+
+            def spec_load_error():
+                cid = page.request.get(base + "/api/queue").json()["cases"][0]["id"]
+                page.route("**/api/case/**", lambda r: r.abort())
+                page.goto(f"{base}/review/{cid}")
+                expect(page.locator("#state-error")).to_be_visible()
+                page.unroute("**/api/case/**")
+                page.click("#btn-retry")
+                expect(page.locator("#work")).to_be_visible()
+                return "error state with retry; retry loads the case"
+            S("Specialist: load error and retry", spec_load_error)
+
+            def spec_phone():
+                p = phone.new_page()
+                watch(p, "spec-phone")
+                p.goto(base + "/review")
+                expect(p.locator("#q-cards")).to_be_visible()
+                p.locator("#q-cards .qcard").first.click()
+                p.wait_for_function("() => typeof C !== 'undefined' && C && C.id")
+                expect(p.locator("#phone-sum")).to_be_visible()
+                sw = p.evaluate("document.documentElement.scrollWidth")
+                assert sw <= 392, f"case screen is {sw}px wide on a 390px phone"
+                p.click("#btn-evidence")
+                expect(p.locator("#aside")).to_be_visible()
+                p.click(".grade[data-grade='0']")
+                p.click("#confirm")
+                expect(p.locator(".toast").last).to_contain_text("Saved case")
+                p.close()
+                return "cards, summary, all evidence, touch grading"
+            S("Specialist: phone queue and touch grading (S4/S5)", spec_phone)
+
+            def spec_clear():
+                page.goto(base + "/review")
+                n = page.locator("#q-rows tr").count()
+                if n:
+                    page.locator("#q-rows tr").first.click()
+                    for _ in range(n + 2):
+                        page.wait_for_function("() => (typeof C !== 'undefined' && C && C.id) || !document.getElementById('state-clear').hidden")
+                        if page.is_visible("#state-clear"):
+                            break
+                        page.keyboard.press("1")
+                        cid = page.evaluate("C.id")
+                        page.keyboard.press("Enter")
+                        page.wait_for_function(f"() => !document.getElementById('state-clear').hidden || (C && C.id !== {cid})")
+                expect(page.locator("#state-clear")).to_be_visible()
+                summary = page.inner_text("#clear-summary")
+                page.goto(base + "/review")
+                expect(page.locator("#q-empty")).to_be_visible()
+                return f"queue clear: {summary.split('.')[0]}; empty queue shows the keys"
+            S("Specialist: queue clear and empty queue (S3)", spec_clear)
+
+            # ================================================================ coordinator
+            def coord():
                 page.goto(base + "/referrals")
-                row = page.locator("tr", has=page.locator("button:has-text('Mark Explained')")).first
-                rid = row.locator("button:has-text('Mark Explained')").get_attribute("onclick")
-                rid = re.search(r"adv\((\d+)", rid).group(1)
+                assert page.locator("#cards").is_hidden()
+                n = page.locator("#rows tr").count()
+                assert n >= 3, n
+                row = page.locator("#rows tr", has_text="Flagged").first
+                rid = row.get_attribute("data-id")
+                row.click()
                 steps = []
-                for label in ("Explained", "Booked", "Missed", "Escalated"):
-                    if label == "Booked":
-                        page.fill(f"#d{rid}", time.strftime("%Y-%m-%d", time.localtime(time.time() + 7 * 86400)))
-                    page.locator(f"button[onclick=\"adv({rid}, '{label.lower()}')\"]").click()
-                    page.wait_for_load_state()
-                    page.wait_for_timeout(300)
-                    steps.append(label)
-                dash = page.request.get(f"{base}/dashboard").text()
-                assert "SMS (mock)" in dash and "family" in dash, "escalation SMS to family not in the outbox"
-                return f"referral {rid}: " + " -> ".join(steps) + "; outbox shows mock SMS to family"
-            S("Referral tracker: explained -> booked -> missed -> escalated", referral_tracker)
+                page.click("#p-moves [data-move=explained]"); steps.append("explained")
+                page.wait_for_function(f"() => D.referrals.find(r => r.id == {rid}).state === 'explained'")
+                page.click("#p-moves [data-move=booked]")  # no date: refused
+                expect(page.locator(".toast").last).to_contain_text("appointment date")
+                page.fill("#p-date", time.strftime("%Y-%m-%d", time.localtime(time.time() + 8 * 86400)))
+                page.click("#p-moves [data-move=booked]"); steps.append("booked")
+                page.wait_for_function(f"() => D.referrals.find(r => r.id == {rid}).state === 'booked'")
+                page.click("#p-moves [data-move=missed]"); steps.append("missed")
+                page.wait_for_function(f"() => D.referrals.find(r => r.id == {rid}).state === 'missed'")
+                page.click("#p-moves [data-move=escalated]"); steps.append("escalated")
+                page.wait_for_function(f"() => D.referrals.find(r => r.id == {rid}).tier === 'family'")
+                assert "Family" in page.inner_text(".tier--on")
+                hist = page.locator("#p-hist li").count()
+                page.click("#filters [data-filter='Missed / escalated']")
+                assert page.locator("#rows tr").count() >= 1
+                return f"R-{rid}: {' -> '.join(steps)}; contact now family; {hist} history entries; filters"
+            S("Coordinator: tracker, moves, booking needs a date, escalation (K1)", coord)
 
-            def booked_needs_date():
-                page.goto(base + "/referrals")
-                btn = page.locator("button:has-text('Mark Booked')").first
-                if btn.count() == 0:
-                    return "no referral at the booking step"
-                msgs = []
-                page.once("dialog", lambda d: (msgs.append(d.message), d.dismiss()))
-                btn.click()
-                page.wait_for_timeout(300)
-                assert msgs and "date" in msgs[0].lower(), msgs
-                return msgs[0]
-            S("Referral tracker: booking requires a date", booked_needs_date)
+            def coord_close():
+                page.click("#filters [data-filter='All open']")
+                row = page.locator("#rows tr", has_text="Booked").first
+                rid = row.get_attribute("data-id")
+                row.click()
+                page.click("#p-moves [data-move=attended]")
+                page.wait_for_function(f"() => D.referrals.find(r => r.id == {rid}).state === 'attended'")
+                page.click("#p-moves [data-move=closed]")
+                page.wait_for_function(f"() => D.referrals.find(r => r.id == {rid}).state === 'closed'")
+                page.click("#filters [data-filter=Closed]")
+                assert page.locator(f"#rows tr[data-id='{rid}']").count() == 1
+                return f"R-{rid} attended then closed; shows under Closed"
+            S("Coordinator: attend and close", coord_close)
 
+            def outbox():
+                page.goto(base + "/outbox")
+                t = page.inner_text("body")
+                assert "MOCK" in t and "No SMS gateway is connected" in t
+                assert "Family" in page.inner_text("#outbox"), "escalation message to family missing"
+                return f"{page.locator('#outbox tbody tr').count()} mock messages, labelled"
+            S("Coordinator: SMS outbox labelled mock (K2)", outbox)
+
+            def coord_phone():
+                p = phone.new_page()
+                p.goto(base + "/referrals")
+                expect(p.locator("#cards")).to_be_visible()
+                b = p.locator("#cards [data-card-move]").first
+                label = b.inner_text()
+                b.click()
+                expect(p.locator(".toast").last).to_be_visible()
+                p.close()
+                return f"cards with the next move ({label})"
+            S("Coordinator: phone cards (K4)", coord_phone)
+
+            # ================================================================ patient
+            def patient_states():
+                p = phone.new_page()
+                r = p.goto(base + "/s/not-a-real-token")
+                assert r.status == 404
+                t = p.inner_text("main")
+                assert "did not open" in t and re.search(DEVANAGARI, t) and re.search(TAMIL, t)
+                today = page.request.get(base + "/api/today").json()["patients"]
+                eyes = [e for pt in today for e in pt["eyes"]]
+                rec = next(e for e in eyes if e["view"]["kind"] == "recall")
+                p.goto(f"{base}/s/{rec['token']}?lang=en")
+                assert p.get_attribute(".banner", "data-kind") == "recall"
+                assert "Next check" in p.inner_text("main")
+                ung = next(e for e in eyes if e["view"]["kind"] == "ungradable")
+                p.goto(f"{base}/s/{ung['token']}?lang=hi")
+                assert re.search(DEVANAGARI, p.inner_text(".banner__title"))
+                p.close()
+                return "bad link in 3 languages; recall with next check; ungradable in Hindi"
+            S("Patient: bad link, recall and ungradable pages (P3/P4/P5)", patient_states)
+
+            # ================================================================ programme
             def dashboard():
                 page.goto(base + "/dashboard")
-                t = page.inner_text("body")
-                assert "recall" in t.lower() and "refer" in t.lower()
-                return "loads with outcome counts"
-            S("Dashboard", dashboard)
+                total = int(page.inner_text("#k-total"))
+                assert total >= 6, total
+                assert page.locator(".stackbar__seg").count() >= 3
+                assert page.locator(".funnel__track").count() == 5
+                return f"{total} eyes, outcome bar, referral funnel"
+            S("Programme: dashboard (M1)", dashboard)
 
-            def result_page():
-                cid = state["refer_case"]
-                out = []
-                for lang, rx in (("en", r"[A-Za-z]"), ("hi", r"[\u0900-\u097F]"), ("ta", r"[\u0B80-\u0BFF]")):
-                    page.goto(f"{base}/case/{cid}?lang={lang}")
-                    assert re.search(rx, page.inner_text("body")), lang
-                    out.append(lang)
-                return f"case {cid} in {out}"
-            S("Result page in three languages", result_page)
+            def evidence():
+                page.goto(base + "/evidence")
+                t = page.inner_text("#m2")
+                assert "96.3%" in t and "87.4%" in t and "0.982" in t and "96.8%" in t
+                assert "SIMULATED" in page.inner_text("main")
+                assert page.locator(".forest__pt").count() == 2
+                return "Messidor-2 vs IDx-DR with CIs, IDRiD, simulated workload"
+            S("Programme: evidence page (M2)", evidence)
 
+            # ================================================================ research
             def study():
                 page.goto(base + "/study")
-                if page.locator("#f-reader").count() == 0:
-                    raise AssertionError("no study set (app/study_set.csv missing)")
-                page.fill("#f-reader", "E2E")
-                page.fill("#f-n", "2")
-                page.locator("button:has-text('Start Reading Session')").click()
+                page.fill("#f-reader", "E2E reader")
+                page.evaluate("document.getElementById('f-n-val').value = 3")  # a short session for the test
+                page.click("button:has-text('Start session')")
                 page.wait_for_url(re.compile(r"/study/\d+/0"))
-                page.click("#btn-grade-0")
+                sid = re.search(r"/study/(\d+)/", page.url).group(1)
+                page.click("#btn-pause")
+                expect(page.locator("#paused")).to_be_visible()
+                page.click("#btn-pause")
+                page.keyboard.press("0")
+                page.keyboard.press("Enter")
                 page.wait_for_url(re.compile(r"/study/\d+/1"))
-                page.click("#btn-grade-2")
+                page.goto(base + "/study")
+                page.click(f"a[href='/study/{sid}/resume']")
+                page.wait_for_url(re.compile(rf"/study/{sid}/1"))
+                page.keyboard.press("2")
+                page.keyboard.press("Enter")
+                page.wait_for_url(re.compile(rf"/study/{sid}/2"))
+                page.keyboard.press("u")
+                page.keyboard.press("Enter")
                 page.wait_for_url(re.compile(r"/study-results/\d+"))
-                t = page.inner_text("body")
-                assert re.search(r"\d+(\.\d+)?\s*s", t), t[:300]
-                return "2-case session read and scored"
-            S("Reader study: start, read 2 cases, results", study)
+                med = page.inner_text("#r-median")
+                with page.expect_download() as dl:
+                    page.click("text=Download CSV")
+                rows = dl.value.path().read_text().strip().splitlines()
+                assert len(rows) == 4, rows
+                return f"pause, resume after 1 of 3, results (median {med}), CSV with 3 answers"
+            S("Research: session, pause, resume, results, CSV (R1/R2/R3)", study)
+
+            def practice():
+                page.goto(base + "/study")
+                before = page.locator("#sessions tbody tr").count()
+                page.click("#btn-practice")
+                page.wait_for_url(re.compile(r"/study/\d+/0"))
+                assert "practice" in page.inner_text(".rv__bar")
+                page.keyboard.press("1")
+                page.keyboard.press("Enter")
+                page.wait_for_url(re.compile(r"/study/\d+/1"))
+                page.goto(base + "/study")
+                after = page.locator("#sessions tbody tr").count()
+                assert after == before, "practice session should not be listed"
+                return "5-image practice runs; answers not saved or listed"
+            S("Research: practice session", practice)
+
+            def phone_widths():
+                p = phone.new_page()
+                tok = page.request.get(base + "/api/today").json()["patients"][0]["eyes"][0]["token"]
+                wide = {}
+                for u in ["/", "/about", "/screen", "/review", "/referrals", "/outbox", "/dashboard", "/evidence", "/study",
+                          f"/s/{tok}", f"/s/{tok}?lang=ta", f"/slip/{tok}", "/s/nope"]:
+                    p.goto(base + u)
+                    p.wait_for_timeout(300)
+                    w = p.evaluate("document.documentElement.scrollWidth")
+                    if w > 392:
+                        wide[u] = w
+                p.close()
+                assert not wide, f"wider than a 390px phone: {wide}"
+                return "13 pages fit a 390 px phone with no sideways scroll"
+            S("Every page fits a phone", phone_widths)
 
             browser.close()
     finally:
         server.terminate()
+        server2.terminate()
 
     width = max(len(n) for n, _, _ in results)
     print()
-    for n, st, d in results:
-        print(f"{st:4}  {n:<{width}}  {d}")
-    fails = sum(st == "FAIL" for _, st, _ in results)
+    for n, st_, d in results:
+        print(f"{st_:4}  {n:<{width}}  {d}")
+    fails = sum(s == "FAIL" for _, s, _ in results)
     print(f"\n{len(results) - fails} passed, {fails} failed; backend {a.backend}")
     if console_errors:
         print(f"\nbrowser errors ({len(console_errors)}):")
         for e in dict.fromkeys(console_errors):
             print("  ", e)
-    print(f"server log and failure screenshots: {work}")
+    print(f"server logs and failure screenshots: {work}")
     sys.exit(1 if fails or console_errors else 0)
 
 

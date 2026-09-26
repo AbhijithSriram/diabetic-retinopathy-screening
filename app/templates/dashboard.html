@@ -1,181 +1,44 @@
-{% extends "base.html" %}{% set active = 'dashboard' %}
-{% block title %}Programme Operations & Clinical Analytics Dashboard · DrishtiTrust{% endblock %}
+{% extends "_base.html" %}
+{% from "_base.html" import logo, shape %}
+{% block title %}Dashboard{% endblock %}
 {% block body %}
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-  <div>
-    <h1>Programme Operations & Clinical Analytics</h1>
-    <p class="muted" style="margin:0;">Real-time screening triage telemetry, district-wide referral completion rates & external validation benchmarks.</p>
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(22) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><b>Dashboard</b><span class="crumb">·</span><a href="/evidence">Evidence</a>
+  <span class="appbar__meta hide-phone">{{ DISCLAIMER }}</span>
+</header>
+<div class="pagehead pagehead--base"><h1 class="h-page">All sites</h1><span class="muted">Since the server database was created · updated {{ d.updated }}</span></div>
+<div class="page stack-lg">
+  <div class="kpis">
+    <div class="kpi"><span>Eyes screened</span><b class="num" id="k-total">{{ d.total }}</b></div>
+    <div class="kpi"><span>Specialist reviews</span><b class="num" id="k-reviews">{{ d.reviews }}</b></div>
+    <div class="kpi"><span>Review time, median · p90</span><b class="num">{% if d.median_s is not none %}{{ d.median_s }} s <small>· {{ d.p90_s }} s</small>{% else %}—{% endif %}</b></div>
+    <div class="kpi"><span>Audit samples (random 2% of recalls)</span><b class="num">{{ d.audits }}</b></div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <span class="pill recall" style="font-size:12.5px;">CRC Safety Bound: &lt; 3% Miss</span>
-  </div>
-</div>
-
-<!-- Primary Telemetry KPIs -->
-{% set total_screened = d.outcomes.values()|sum %}
-{% set total_referred = d.referral_states.values()|sum %}
-{% set completed_referrals = d.referral_states.get('attended', 0) + d.referral_states.get('closed', 0) %}
-{% set completion_rate = ((100 * completed_referrals) / total_referred)|round(1) if total_referred > 0 else 0 %}
-
-<div class="kpis">
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-ink-heading);">{{ total_screened }}</div>
-    <div class="l">Total Photos Screened</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-recall-ink);">{{ d.outcomes.get('recall', 0) }}</div>
-    <div class="l">Routine Re-screens (Auto-Recall)</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-review-ink);">{{ d.outcomes.get('review', 0) }}</div>
-    <div class="l">Sent to 30s Tele-Review</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-refer-ink);">{{ d.outcomes.get('refer', 0) }}</div>
-    <div class="l">Direct Hospital Referrals</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-orange-primary);">
-      {{ d.review_seconds_median if d.review_seconds_median is not none else '—' }} s
-    </div>
-    <div class="l">Median Review Speed (p90: {{ d.review_seconds_p90 if d.review_seconds_p90 is not none else '—' }} s)</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-orange-vibrant);">{{ completion_rate }}%</div>
-    <div class="l">Referral Attended ({{ completed_referrals }} / {{ total_referred }})</div>
-  </div>
-</div>
-
-<!-- Offline Validation Benchmarking vs IDx-DR -->
-{% for name, ev in results.items() %}
-<div class="panel" style="margin-top:16px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
-    <h2 style="margin:0;">External Clinical Validation: {{ name }}</h2>
-    <span class="pill review" style="font-size:12px;">Frozen Calibrated Thresholds</span>
-  </div>
-  <p class="small muted" style="margin-bottom:12px;">
-    Operating points and triage cutoffs fitted strictly on the internal calibration split, then evaluated once on unseen external test sets (India & France).
-  </p>
-  <div style="overflow-x:auto;">
-    <table>
-      <thead>
-        <tr>
-          <th>External Test Set</th>
-          <th>Camera & Origin</th>
-          <th>Images (n)</th>
-          <th>AUC Score</th>
-          <th>Sensitivity (95% CI)</th>
-          <th>Specificity (95% CI)</th>
-          <th>QWK Kappa</th>
-          <th>Referable Miss Rate (CRC)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for set_name, v in ev.sets.items() %}
-        <tr>
-          <td><b>{{ set_name }}</b></td>
-          <td>
-            {% if 'IDRiD' in set_name %}
-            <span class="small">Kowa (India)</span>
-            {% elif 'Messidor' in set_name %}
-            <span class="small">Topcon (France)</span>
-            {% else %}
-            <span class="small">Canon / Mixed</span>
-            {% endif %}
-          </td>
-          <td style="font-family:var(--dt-font-mono);">{{ v.n_images }}</td>
-          <td><b style="font-family:var(--dt-font-mono);color:var(--dt-orange-primary);">{{ '%.3f' % v.auc_referable[0] }}</b></td>
-          <td>
-            <b style="font-family:var(--dt-font-mono);">{{ '%.1f%%' % (100 * v.at_operating_point.sensitivity[0]) }}</b>
-            <span class="small muted">({{ '%.1f' % (100 * v.at_operating_point.sensitivity[1]) }}–{{ '%.1f' % (100 * v.at_operating_point.sensitivity[2]) }})</span>
-          </td>
-          <td>
-            <b style="font-family:var(--dt-font-mono);">{{ '%.1f%%' % (100 * v.at_operating_point.specificity[0]) }}</b>
-            <span class="small muted">({{ '%.1f' % (100 * v.at_operating_point.specificity[1]) }}–{{ '%.1f' % (100 * v.at_operating_point.specificity[2]) }})</span>
-          </td>
-          <td style="font-family:var(--dt-font-mono);">{{ v.qwk }}</td>
-          <td>
-            {% set auto_rec = v.triage_cnn_only.referable_auto_recalled %}
-            {% set miss_pct = (100 * auto_rec.count / auto_rec.of_referable)|round(1) if auto_rec.of_referable > 0 else 0 %}
-            <span class="pill {{ 'recall' if miss_pct <= 3.0 else 'urgent' }}" style="font-size:11px;">
-              {{ miss_pct }}% ({{ auto_rec.count }}/{{ auto_rec.of_referable }})
-            </span>
-          </td>
-        </tr>
+  <div class="twocol">
+    <section class="card stack" aria-labelledby="h-out">
+      <b id="h-out" class="h-sub">Outcomes</b>
+      {% if d.total %}
+      <div class="stackbar" role="img" aria-label="Outcome shares">{% for k in ['recall', 'review', 'refer', 'ungradable'] %}{% if d.counts[k] %}<div class="stackbar__seg stackbar__seg--{{ k }}" style="flex:{{ d.counts[k] }}"></div>{% endif %}{% endfor %}</div>
+      <div class="legend">
+        {% for k, lab in [('recall', 'Recall'), ('review', 'Review'), ('refer', 'Refer'), ('ungradable', 'Ungradable (after 3 tries)')] %}
+        <span class="outcome outcome--{{ k }}">{{ shape(k, 12) }}</span><span>{{ lab }}</span><b class="r num">{{ d.counts[k] }}</b><span class="r muted num">{{ (100 * d.counts[k] / d.total)|round|int }}%</span>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div style="margin-top:12px;background:var(--dt-surface-raised);padding:10px 14px;border-radius:var(--dt-radius-sm);font-size:13px;line-height:1.5;">
-    <b>Clinical Equivalence Note:</b> On Messidor-2 at the patient exam level, DrishtiTrust achieves <b>96.3% sensitivity / 87.4% specificity (AUC 0.982)</b>, tying the published performance of <b>IDx-DR (96.8% / 87.0%, AUC 0.980)</b>, an FDA-authorized autonomous diagnostic system.
-  </div>
-</div>
-{% endfor %}
-
-<!-- District Healthcare Economics & Queuing Simulation -->
-<div class="panel" style="margin-top:16px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
-    <h2 style="margin:0;">District Queuing Simulation (100k Screenings/Year)</h2>
-    <span class="pill review" style="font-size:12px;">SimPy & SimEvents Engine</span>
-  </div>
-  <p class="small muted" style="margin-bottom:14px;">
-    Mirrors <code>matlab/district_sim.m</code> and <code>sim/district.py</code>. Models rural cellular connectivity outages, reviewer SLA compliance, and hospital queue saturation across an entire district.
-  </p>
-
-  <div class="row" style="margin-bottom:14px;">
-    <div style="background:var(--dt-surface-sunken);padding:12px 14px;border-radius:var(--dt-radius-sm);border:1px solid var(--dt-border-strong);">
-      <div class="small muted" style="font-weight:600;">Tele-Review Workload Reduction</div>
-      <div style="font-size:22px;font-weight:700;font-family:var(--dt-font-mono);color:var(--dt-orange-primary);margin-top:4px;">78.2% Auto-Decided</div>
-      <div class="small muted" style="margin-top:4px;">Only 21.8% of cases require 30s ophthalmologist tele-review.</div>
-    </div>
-    <div style="background:var(--dt-surface-sunken);padding:12px 14px;border-radius:var(--dt-radius-sm);border:1px solid var(--dt-border-strong);">
-      <div class="small muted" style="font-weight:600;">Minimum Reviewer Capacity Needed</div>
-      <div style="font-size:22px;font-weight:700;font-family:var(--dt-font-mono);color:var(--dt-ink-heading);margin-top:4px;">2 Doctors (2h/day)</div>
-      <div class="small muted" style="margin-top:4px;">Maintains &gt; 95% 48-hour tele-review SLA compliance under 60% cellular uptime.</div>
-    </div>
-    <div style="background:var(--dt-surface-sunken);padding:12px 14px;border-radius:var(--dt-radius-sm);border:1px solid var(--dt-border-strong);">
-      <div class="small muted" style="font-weight:600;">Closing the Referral Attendance Gap</div>
-      <div style="font-size:22px;font-weight:700;font-family:var(--dt-font-mono);color:var(--dt-recall-ink);margin-top:4px;">+1,420 Patients/Yr</div>
-      <div class="small muted" style="margin-top:4px;">Escalating contact to ASHA workers increases hospital attendance from 15% to 40%.</div>
-    </div>
-  </div>
-</div>
-
-<!-- Message Notification Outbox Audit Log -->
-<div class="panel" style="margin-top:16px;">
-  <h2>Recent SMS Notifications Dispatched (Outbox Log)</h2>
-  {% if d.outbox %}
-  <div style="overflow-x:auto;">
-    <table class="small">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Referral ID</th>
-          <th>Channel</th>
-          <th>Recipient Contact Tier</th>
-          <th>Notification Text</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for m in d.outbox %}
-        <tr>
-          <td style="font-family:var(--dt-font-mono);white-space:nowrap;">{{ m.created|ago }}</td>
-          <td><b style="font-family:var(--dt-font-mono);">#{{ m.referral_id }}</b></td>
-          <td><span class="pill review" style="font-size:11px;">{{ m.channel }}</span></td>
-          <td>
-            <span class="pill {{ 'urgent' if m.recipient=='asha' else ('review' if m.recipient=='family' else 'recall') }}" style="font-size:11px;">
-              {{ m.recipient|upper }}
-            </span>
-          </td>
-          <td style="line-height:1.45;">{{ m.text }}</td>
-        </tr>
+      </div>
+      {% else %}<p class="muted">No screenings yet.</p>{% endif %}
+      <p class="muted small divider-top">Retake requests (attempts 1–2) are not counted as outcomes.</p>
+    </section>
+    <section class="card stack" aria-labelledby="h-fun">
+      <b id="h-fun" class="h-sub">Referral funnel</b>
+      {% set top = d.funnel.flagged or 1 %}
+      <div class="funnel">
+        {% for s in ['flagged', 'explained', 'booked', 'attended', 'closed'] %}
+        <span>{{ s|capitalize }}</span><div class="funnel__track"><div style="width:{{ (100 * d.funnel[s] / top)|round(1) }}%"></div></div><b class="r num">{{ d.funnel[s] }}</b>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+      <div class="rowwrap divider-top"><span>Missed <b>{{ d.funnel.missed }}</b></span><span>Escalated <b>{{ d.funnel.escalated }}</b> (family {{ d.tiers.family }} · ASHA {{ d.tiers.asha }})</span></div>
+      <p class="muted small">Counts are referrals that reached each state at least once.</p>
+    </section>
   </div>
-  {% else %}
-  <p class="muted small">No notifications dispatched yet.</p>
-  {% endif %}
 </div>
+<div class="disclaimer show-phone">{{ DISCLAIMER }}</div>
 {% endblock %}

@@ -1,351 +1,275 @@
-{% extends "base.html" %}{% set active = 'study' if study else 'review' %}
-{% block title %}Tele-Review Workstation · DrishtiTrust{% endblock %}
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}{{ 'Reader study' if study else 'Review case' }}{% endblock %}
+{% block bodyclass %}rv{% endblock %}
 {% block body %}
-<!-- Top Header Bar with Stopwatch HUD -->
-<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-  <div>
-    <h1 style="margin:0 0 4px;">
-      {% if study %}
-      Reader Study Session · Case {{ study.k + 1 }} of {{ study.n }}
-      {% else %}
-      Case #{{ c.id }} · {{ c.patient or 'Anonymized' }} ({{ c.eye|capitalize }} Eye)
-      {% endif %}
-    </h1>
-    <p class="muted small" style="margin:0;">
-      {% if study %}
-      Blinded clinical study session · Measure reading time and agreement against reference consensus.
-      {% else %}
-      Screened at <b>{{ c.site }}</b> · {{ 'URGENT referral' if c.urgent else 'Uncertain AI triage' }} · Target review time: &lt; 30.0 s
-      {% endif %}
-    </p>
-  </div>
+{% if study %}
+<header class="rv__bar rv__bar--study">
+  <b>Reader study · S-{{ study.sid }}{{ ' · practice' if study.practice }}</b><span class="dim">{{ study.reader }}</span>
+  <div class="rv__progress"><div class="rv__progress-track"><div style="width:{{ (100 * study.k / study.n)|round(1) }}%"></div></div><span class="num">Image {{ study.k + 1 }} of {{ study.n }}</span></div>
+  <span class="code dim ml-auto">{{ study.image_id }}</span>
+  <span class="timer" id="timer">0:00</span>
+  <button type="button" class="btn btn--ghost-dark btn--sm" id="btn-pause">Pause</button>
+</header>
+{% else %}
+<header class="rv__bar">
+  <a href="/review" class="linkbtn">← Queue</a>
+  <b class="code" id="h-case">Case {{ case_id }}</b>
+  <span id="h-who" class="hide-phone"></span>
+  <span class="muted hide-phone" id="h-wait"></span>
+  <span id="h-badges"></span>
+  <span class="muted ml-auto hide-phone" id="h-pos"></span>
+  <span class="timer" id="timer">0:00<span class="timer__note" id="timer-note">target 0:30</span></span>
+</header>
+{% endif %}
 
-  <!-- Stopwatch HUD Display -->
-  <div style="display:flex;align-items:center;gap:12px;background:var(--dt-surface);padding:8px 18px;border-radius:var(--dt-radius-md);border:1.5px solid var(--dt-border-strong);box-shadow:var(--dt-shadow-sm);">
-    <div style="text-align:right;">
-      <div class="small muted" style="font-weight:600;text-transform:uppercase;letter-spacing:0.5px;font-size:10.5px;">Elapsed Review</div>
-      <div class="timer" id="timer">0.0 s</div>
+<div class="rv__work" id="work">
+  <div class="rv__left">
+    <div class="rv__tools">
+      <div class="seg seg--sm" role="group" aria-label="Image layer" id="layers">
+        <button type="button" data-layer="photo" aria-pressed="true"><span class="kbd-inline">P</span>Photo</button><button type="button" data-layer="lesions" aria-pressed="false"><span class="kbd-inline">L</span>Lesions</button><button type="button" data-layer="gradcam" aria-pressed="false"><span class="kbd-inline">H</span>Heatmap</button>
+      </div>
+      <span class="muted small hide-phone">Scroll to zoom · drag to pan · double-click to reset</span>
     </div>
-    <div id="timer-indicator" style="width:10px;height:10px;border-radius:50%;background:var(--dt-orange-primary);"></div>
+    <div class="rv__viewer viewer" id="viewer">
+      <img id="img" alt="Fundus photo" draggable="false">
+      <div class="viewer__tags"><span id="tag-eye"></span><span id="tag-qual"></span></div>
+      <div class="viewer__paused" id="paused" hidden><b>Paused</b><span>Press Resume to continue. The timer is stopped.</span></div>
+    </div>
   </div>
+  <aside class="rv__aside" id="aside">
+    <section class="rv__sec"><div class="eyebrow-caps">AI grade</div>
+      <div id="ai-block">
+        <div class="rowspread rowspread--base"><b class="h-sub" id="ai-most"></b><span class="muted small">P(referable) <b class="big num" id="ai-pref"></b></span></div>
+        <div class="muted small">90% range: <b class="ink" id="ai-range"></b></div>
+        <div class="probs" id="ai-probs"></div>
+      </div>
+      <div class="notice notice--review" id="no-ai" hidden><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,0.5 15.5,8 8,15.5 0.5,8" fill="currentColor"/></svg><div><b>No AI grade.</b> Model files were missing on the server, so this photo came straight to review. Only the quality check ran.</div></div>
+    </section>
+    {% if not study %}<section class="rv__sec"><div class="eyebrow-caps">Why it is here</div><div id="why" class="stack-xs"></div></section>{% endif %}
+    <section class="rv__sec" id="lesion-sec"><div class="eyebrow-caps">Lesions by quadrant</div>
+      <div class="qtable" id="quads"></div>
+      <div class="rowwrap small"><span>Macular oedema signs: <b id="dme-ai"></b></span><span>Nearest exudate: <b id="dd"></b></span></div>
+    </section>
+    <section class="rv__sec rv__sec--last" id="trace-sec"><div class="eyebrow-caps">Rule engine</div><ol class="trace" id="trace"></ol></section>
+  </aside>
+  <div class="rv__summary show-phone" id="phone-sum"><div class="rowspread"><b id="ps-most"></b><span>P(ref) <b id="ps-pref"></b></span></div><span class="muted" id="ps-line"></span></div>
+  <button type="button" class="linkbtn show-phone rv__evidence" id="btn-evidence">All evidence</button>
 </div>
 
-<!-- Main Split-Screen Workstation -->
-<div class="grid2">
-  <!-- Left Viewport: Interactive Retina Canvas -->
-  <div class="panel" style="display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-      <div class="tabs" style="margin-bottom:0;">
-        {% if r.images %}
-        {% if r.images.lesions %}
-        <button type="button" data-img="lesions" id="tab-lesions" class="on">
-          <span style="font-family:var(--dt-font-mono);font-size:11px;opacity:0.7;">[1]</span> Annotated Lesions
-        </button>
-        {% endif %}
-        <button type="button" data-img="photo" id="tab-photo" class="{{ 'on' if not r.images.lesions }}">
-          <span style="font-family:var(--dt-font-mono);font-size:11px;opacity:0.7;">[2]</span> Raw Fundus
-        </button>
-        {% if r.images.gradcam %}
-        <button type="button" data-img="gradcam" id="tab-gradcam">
-          <span style="font-family:var(--dt-font-mono);font-size:11px;opacity:0.7;">[3]</span> Grad-CAM Heatmap
-        </button>
-        {% endif %}
-        {% endif %}
-      </div>
-
-      <div class="small muted" style="font-family:var(--dt-font-mono);">
-        Tab: Cycle Views
-      </div>
-    </div>
-
-    <!-- Retina Canvas Frame -->
-    <div class="imgbox" style="position:relative;min-height:360px;display:flex;align-items:center;justify-content:center;">
-      <img id="main-retina" src="{{ (r.images.lesions or r.images.photo) if r.images }}" alt="Retinal Fundus Image" style="transition:opacity 180ms ease-out;">
-    </div>
-
-    <!-- Anatomical Color Legend -->
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--dt-border-subtle);display:flex;flex-wrap:wrap;gap:12px 16px;font-size:12px;">
-      <span style="display:inline-flex;align-items:center;gap:5px;">
-        <span style="width:10px;height:10px;border-radius:50%;border:2px solid #DC2626;display:inline-block;"></span>
-        <b>MA</b>: Microaneurysms
-      </span>
-      <span style="display:inline-flex;align-items:center;gap:5px;">
-        <span style="width:10px;height:10px;border-radius:50%;background:#881337;display:inline-block;"></span>
-        <b>HE</b>: Haemorrhages
-      </span>
-      <span style="display:inline-flex;align-items:center;gap:5px;">
-        <span style="width:10px;height:10px;border-radius:50%;background:#D97706;display:inline-block;"></span>
-        <b>EX</b>: Hard Exudates
-      </span>
-      <span style="display:inline-flex;align-items:center;gap:5px;">
-        <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block;"></span>
-        <b>SE</b>: Cotton-Wool Spots
-      </span>
-      <span style="display:inline-flex;align-items:center;gap:5px;">
-        <span style="width:10px;height:10px;border-radius:50%;border:2px solid #059669;display:inline-block;"></span>
-        <b>OD</b>: Optic Disc
-      </span>
-      <span style="display:inline-flex;align-items:center;gap:5px;">
-        <span style="width:10px;height:10px;border-radius:50%;border:2px solid #0284C7;display:inline-block;"></span>
-        <b>Fovea</b>: 1-DD Zone
-      </span>
-    </div>
+<div class="rv__decide" id="decide">
+  <div class="grades" role="group" aria-label="Your grade" id="grades">
+    {% for k, lab in [(0,'No DR'),(1,'Mild'),(2,'Moderate'),(3,'Severe'),(4,'PDR'),('U','Ungradable')] %}
+    <button type="button" class="grade" data-grade="{{ k }}" aria-pressed="false"><span class="grade__key">{{ k }}</span><span class="grade__label">{{ lab }}</span></button>
+    {% endfor %}
   </div>
-
-  <!-- Right Viewport: Clinical Intelligence & Decision HUD -->
-  <div>
-    <!-- AI Diagnostic Summary -->
-    <div class="panel">
-      <h2>AI Clinical Summary</h2>
-      {% if r.grade %}
-      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
-        <div>
-          <span style="font-size:13px;color:var(--dt-ink-muted);">Referable DR Risk:</span>
-          <span style="font-size:20px;font-weight:700;font-family:var(--dt-font-mono);color:{{ 'var(--dt-crimson-primary)' if r.grade.p_referable >= 0.5 else 'var(--dt-orange-primary)' }};margin-left:6px;">
-            {{ '%.1f' % (100 * r.grade.p_referable) }}%
-          </span>
-        </div>
-        {% if r.grade_set %}
-        <span class="pill review" style="font-size:12px;">
-          90% Range: <b>{{ r.grade_set|join(' to ') }}</b>
-        </span>
-        {% endif %}
-      </div>
-
-      <!-- Probability Distribution Bars -->
-      <table class="gradebars" style="margin-top:6px;">
-        {% for p in r.grade.probs %}
-        <tr class="{{ 'inset' if r.grade_set and ICDR[loop.index0] in r.grade_set }}">
-          <td>{{ loop.index0 }} · {{ ICDR[loop.index0] }}</td>
-          <td style="width:100%;">
-            <div class="bar">
-              <span style="width:{{ (100 * p)|round(1) }}%;background:{{ 'var(--dt-crimson-primary)' if loop.index0 >= 2 else 'var(--dt-orange-vibrant)' }};"></span>
-            </div>
-          </td>
-          <td class="small" style="font-family:var(--dt-font-mono);width:45px;text-align:right;">
-            {{ '%.0f' % (100 * p) }}%
-          </td>
-        </tr>
-        {% endfor %}
-      </table>
-
-      {% if r.reasons %}
-      <div style="margin-top:10px;padding:8px 12px;background:var(--dt-surface-sunken);border-radius:var(--dt-radius-sm);font-size:12.5px;">
-        <b>Triage Rationale:</b> {{ r.reasons|join('; ') }}.
-      </div>
-      {% endif %}
-      {% else %}
-      <p class="muted">Ordinal grader inference not available.</p>
-      {% endif %}
-    </div>
-
-    <!-- Lesion Evidence & ICDR Clinical Rules -->
-    {% if r.rules %}
-    <div class="panel">
-      <h2>Lesion Spatial Breakdown (ICDR Criteria)</h2>
-      <table class="small" style="margin-bottom:10px;">
-        <thead>
-          <tr>
-            <th>Quadrant</th>
-            <th style="color:#DC2626;">MA</th>
-            <th style="color:#881337;">HE</th>
-            <th style="color:#D97706;">EX</th>
-            <th style="color:#F59E0B;">SE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for q, v in r.rules.quadrants.items() %}
-          <tr>
-            <td><b>{{ q|capitalize }}</b></td>
-            <td>{{ v.MA or 0 }}</td>
-            <td>{{ v.HE or 0 }}</td>
-            <td>{{ v.EX or 0 }}</td>
-            <td>{{ v.SE or 0 }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      {% if r.rules.dme_flag %}
-      <div style="background:var(--dt-review-bg);border:1px solid var(--dt-review-border);padding:8px 12px;border-radius:var(--dt-radius-sm);margin-bottom:10px;font-size:13px;color:var(--dt-review-ink);font-weight:600;">
-        ⚠️ Possible Diabetic Macular Oedema (Hard exudates detected within 1 DD of fovea).
-      </div>
-      {% endif %}
-
-      <ul class="trace small" style="margin:4px 0 0;padding-left:18px;color:var(--dt-ink-muted);">
-        {% for t in r.rules.trace %}
-        <li>{{ t }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-
-    <!-- Ophthalmologist Decision Pad -->
-    <div class="panel" style="border:1.5px solid var(--dt-border-focus);background:var(--dt-surface-raised);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <h2 style="margin:0;">Your Clinical Decision</h2>
-        <span class="small muted" style="font-family:var(--dt-font-mono);">Hotkeys: [0] to [4]</span>
-      </div>
-
-      <div class="decide">
-        {% for g in range(5) %}
-        <button type="button" class="btn" data-grade="{{ g }}" id="btn-grade-{{ g }}">
-          {{ g }}
-          <small>{{ ICDR[g] }}</small>
-        </button>
-        {% endfor %}
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--dt-border-subtle);">
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0;font-size:13.5px;">
-          <input type="checkbox" id="dme" style="accent-color:var(--dt-orange-primary);width:16px;height:16px;">
-          <span>Macular Oedema <b>[Key: D]</b></span>
-        </label>
-
-        <button type="button" class="btn" id="ungradable" style="padding:6px 14px;font-size:13px;">
-          Mark Ungradable <b>[Key: U]</b>
-        </button>
-      </div>
-
-      <p class="small" id="done" style="margin:10px 0 0;font-weight:600;color:var(--dt-orange-primary);min-height:18px;"></p>
-    </div>
-  </div>
+  <button type="button" class="dmebtn" id="dme" aria-pressed="false"><span class="kbd-inline kbd-inline--box">D</span><span>Macular oedema: <span id="dme-label">no</span></span></button>
+  {% if not study %}<label class="rv__appt hide-phone"><span class="small muted">Appointment (optional)</span><input type="date" class="input input--sm" id="appt"></label>{% endif %}
+  {% if not study %}<div class="rv__preview hide-phone"><span class="muted small">Sent to health worker</span><b id="preview">Choose a grade</b></div>{% endif %}
+  <button type="button" class="btn rv__confirm" id="confirm" disabled>{{ 'Save and next' if study else 'Confirm' }} <span class="kbd kbd--inherit">Enter</span></button>
 </div>
+
+<div class="rv__state" id="state-error" hidden><div class="alertbox"><b class="h-sub">Could not load case <span id="err-id"></span></b><span>The server did not return the images or model outputs. No decision has been recorded. The timer is paused.</span><div class="rowwrap center"><button type="button" class="btn btn--primary" id="btn-retry">Try again</button><button type="button" class="btn btn--secondary" id="btn-skip">Skip to next case</button></div></div></div>
+<div class="rv__state" id="state-clear" hidden><div class="stack center" style="max-width:420px"><b class="h-page">Queue is clear</b><span class="muted" id="clear-summary"></span><a class="btn btn--secondary align-center" href="/review">Back to the queue</a></div></div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const imgs = {{ (r.images or {})|tojson }};
-const t0 = performance.now();
-const timer = document.getElementById('timer');
-const timerIndicator = document.getElementById('timer-indicator');
-let stopped = false;
+const STUDY = {{ study|tojson }};
+const CFG = {{ cfg|tojson }};
+const ICDR = {{ ICDR|tojson }};
+const NAMES = ['0 No DR', '1 Mild NPDR', '2 Moderate', '3 Severe NPDR', '4 Proliferative'];
+const QNAMES = [['superior-temporal', 'Sup-temporal'], ['superior-nasal', 'Sup-nasal'], ['inferior-temporal', 'Inf-temporal'], ['inferior-nasal', 'Inf-nasal']];
+let caseId = {{ case_id|tojson }};
+let C = {{ (case_json if case_json is defined else none)|tojson }};
+let grade = null, dme = false, layer = 'photo', t0 = performance.now(), paused = 0, pausedAt = null, busy = false;
+const done = [];
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 
-// Millisecond Stopwatch HUD with Amber/Crimson Alert Shifts
-const tick = () => {
-  if (stopped) return;
-  const s = (performance.now() - t0) / 1000;
-  timer.textContent = s.toFixed(1) + ' s';
-  if (s >= 30.0) {
-    timer.classList.add('over');
-    timer.classList.remove('warn');
-    if (timerIndicator) timerIndicator.style.background = 'var(--dt-crimson-primary)';
-  } else if (s >= 20.0) {
-    timer.classList.add('warn');
-    timer.classList.remove('over');
-    if (timerIndicator) timerIndicator.style.background = 'var(--dt-orange-warm)';
-  } else {
-    timer.classList.remove('warn', 'over');
-    if (timerIndicator) timerIndicator.style.background = 'var(--dt-orange-primary)';
-  }
-};
-const timerId = setInterval(tick, 100);
-
-// Multi-Layer Canvas Switcher with Optical Blend
-const mainImg = document.getElementById('main-retina');
-const tabButtons = document.querySelectorAll('.tabs button');
-
-function switchLayer(layerKey) {
-  if (!imgs[layerKey]) return;
-  tabButtons.forEach(b => b.classList.toggle('on', b.dataset.img === layerKey));
-  mainImg.style.opacity = '0.35';
-  setTimeout(() => {
-    mainImg.src = imgs[layerKey];
-    mainImg.style.opacity = '1.0';
-  }, 90);
+// ------------------------------------------------------------ timer
+function elapsed() { return (pausedAt ? pausedAt : performance.now()) - t0 - paused; }
+setInterval(() => {
+  const s = Math.max(0, Math.floor(elapsed() / 1000));
+  const t = $('#timer'); if (!t) return;
+  const over = s >= 30;
+  t.firstChild.nodeValue = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  t.classList.toggle('timer--over', over);
+  const n = $('#timer-note'); if (n) n.textContent = over ? 'over 30 s' : 'target 0:30';
+}, 250);
+function pause(on) {
+  if (on && !pausedAt) pausedAt = performance.now();
+  if (!on && pausedAt) { paused += performance.now() - pausedAt; pausedAt = null; }
 }
 
-tabButtons.forEach(b => {
-  b.onclick = () => switchLayer(b.dataset.img);
-});
-
-// Layer Cycle Order for Tab Key
-const layers = ['lesions', 'photo', 'gradcam'].filter(k => imgs[k]);
-let currentLayerIdx = 0;
-function cycleLayer() {
-  if (!layers.length) return;
-  currentLayerIdx = (currentLayerIdx + 1) % layers.length;
-  switchLayer(layers[currentLayerIdx]);
+// ------------------------------------------------------------ render
+function render() {
+  const g = C.grade;
+  const noAI = !g;
+  $('#ai-block').hidden = noAI; $('#no-ai').hidden = !noAI;
+  $('#lesion-sec').hidden = noAI || !C.rules; $('#trace-sec').hidden = noAI || !C.rules;
+  if (g) {
+    $('#ai-most').textContent = g.most_likely;
+    $('#ai-pref').textContent = g.p_referable.toFixed(3);
+    $('#ai-range').textContent = (C.grade_set || []).join(' – ') || '—';
+    const top = g.probs.indexOf(Math.max(...g.probs));
+    $('#ai-probs').innerHTML = g.probs.map((p, i) => `<div class="prob ${(C.grade_set_idx || []).includes(i) ? 'prob--in-set' : ''}"><span class="${i === top ? 'strong' : ''}">${NAMES[i]}</span><div class="prob__track"><div class="prob__fill" style="width:${(p * 100).toFixed(1)}%"></div></div><span class="r num">${p.toFixed(3)}</span></div>`).join('');
+  }
+  $('#ps-most').textContent = g ? g.most_likely : 'No AI grade';
+  $('#ps-pref').textContent = g ? g.p_referable.toFixed(3) : '—';
+  $('#ps-line').textContent = g ? `Range ${(C.grade_set || []).join(' – ')}${C.rules && C.rules.nearest_exudate_dd != null ? ' · EX ' + Number(C.rules.nearest_exudate_dd).toFixed(2) + ' DD from fovea' : ''}` : 'Model files were missing; only the quality check ran.';
+  if (C.rules) {
+    const q = C.rules.quadrants || {};
+    const rows = QNAMES.map(([k, n]) => [n, ['MA', 'HE', 'EX', 'SE'].map(x => (q[k] || {})[x] || 0), false]);
+    rows.push(['Total', [0, 1, 2, 3].map(j => rows.reduce((a, r) => a + r[1][j], 0)), true]);
+    $('#quads').innerHTML = `<div class="qh"></div><div class="qh">MA</div><div class="qh">HE</div><div class="qh">EX</div><div class="qh">SE</div>` +
+      rows.map(([n, v, tot]) => `<div class="${tot ? 'strong' : ''} l">${n}</div>` + v.map(x => `<div class="${tot ? 'strong' : ''} ${x ? '' : 'zero'}">${x}</div>`).join('')).join('');
+    $('#dme-ai').textContent = C.rules.dme_flag ? 'yes' : 'no';
+    $('#dd').textContent = C.rules.nearest_exudate_dd != null ? `${Number(C.rules.nearest_exudate_dd).toFixed(2)} DD` : 'none found';
+    $('#trace').innerHTML = (C.rules.trace || []).map(t => `<li>${DT.esc(t)}</li>`).join('');
+  }
+  if (!STUDY) {
+    const why = C.audit && C.outcome === 'recall' ? ['Random 2% audit of an automatic recall'] : (C.reasons.length ? C.reasons : ['Sent for review']);
+    $('#why').innerHTML = why.map(r => `<div class="whyline">${DT.shape('review', 10)}${DT.esc(r)}</div>`).join('');
+    $('#h-case').textContent = `Case ${C.id}`;
+    $('#h-who').innerHTML = `${DT.esc(C.site)} · <span class="code">${DT.esc(C.patient || '—')}</span> · ${C.eye === 'right' ? 'Right' : 'Left'} eye`;
+    const w = (Date.now() / 1000 - C.created) / 3600;
+    $('#h-wait').textContent = `waiting ${w < 1 ? Math.round(w * 60) + ' min' : Math.round(w) + ' h'}`;
+    $('#h-badges').innerHTML = (C.urgent ? '<span class="badge badge--urgent badge--sm"><span class="badge__shape"></span>Urgent</span> ' : '') +
+      (C.audit && C.outcome === 'recall' ? '<span class="badge badge--audit badge--sm">Audit sample · AI said recall</span>' : '');
+    $('#tag-eye').textContent = `${C.eye === 'right' ? 'Right' : 'Left'} eye`;
+  } else $('#tag-eye').textContent = STUDY.image_id;
+  const q = C.quality && C.quality.gradability;
+  $('#tag-qual').textContent = q != null ? `quality ${q.toFixed(2)}` : 'quality: rules only';
+  setLayer('photo');
+  setGrade(null); dme = false; setDme(false);
+  if ($('#appt')) $('#appt').value = '';
+}
+function setLayer(l) {
+  const imgs = C.images || {};
+  if (l !== 'photo' && !imgs[l]) return;
+  layer = l;
+  $$('#layers button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.layer === l)));
+  $('#img').src = imgs[l] || imgs.photo || '';
+  $('#img').alt = { photo: 'Fundus photo', lesions: 'Lesion overlay: MA red, HE dark red, EX yellow, SE white; optic disc green; fovea cyan', gradcam: 'Grad-CAM heatmap for referable DR' }[l];
+}
+function outcomeOf(g, d) {
+  if (g === null) return ['Choose a grade', ''];
+  if (g === 'U') return [`Ungradable · in-person check, ${CFG.routine_days} days`, 'ungradable'];
+  if (g >= 3 || d) return [`Urgent refer · ${CFG.urgent_days} days`, 'urgent'];
+  if (g >= 2) return [`Refer · ${CFG.routine_days} days`, 'refer'];
+  return [`Recall · ${CFG.recall_months} months`, 'recall'];
+}
+function setGrade(g) {
+  grade = g;
+  $$('.grade').forEach(b => b.setAttribute('aria-pressed', String(String(g) === b.dataset.grade)));
+  $('#confirm').disabled = g === null;
+  $('#confirm').classList.toggle('btn--primary', g !== null);
+  preview();
+}
+function setDme(v) { dme = v; $('#dme').setAttribute('aria-pressed', String(v)); $('#dme-label').textContent = v ? 'yes' : 'no'; preview(); }
+function preview() {
+  const p = $('#preview'); if (!p) return;
+  const [t, k] = outcomeOf(grade, dme);
+  p.textContent = t; p.className = k ? `outcome outcome--${k}` : 'muted';
 }
 
-// Decision Submission Pipeline
-const study = {{ study|tojson }};
-async function submit(grade, ungradable) {
-  if (stopped) return;
-  stopped = true;
-  clearInterval(timerId);
-  const ms = Math.round(performance.now() - t0);
+// ------------------------------------------------------------ zoom / pan
+let z = 1, px = 0, py = 0, drag = null;
+function applyZoom() { $('#img').style.transform = `translate(${px}px, ${py}px) scale(${z})`; }
+$('#viewer').addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = $('#viewer').getBoundingClientRect(), cx = e.clientX - r.left - r.width / 2, cy = e.clientY - r.top - r.height / 2;
+  const nz = Math.min(6, Math.max(1, z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+  px = cx - (cx - px) * nz / z; py = cy - (cy - py) * nz / z; z = nz;
+  if (z === 1) { px = 0; py = 0; }
+  applyZoom();
+}, { passive: false });
+$('#viewer').addEventListener('mousedown', e => { if (z > 1) drag = { x: e.clientX - px, y: e.clientY - py }; });
+addEventListener('mousemove', e => { if (drag) { px = e.clientX - drag.x; py = e.clientY - drag.y; applyZoom(); } });
+addEventListener('mouseup', () => drag = null);
+$('#viewer').addEventListener('dblclick', () => { z = 1; px = 0; py = 0; applyZoom(); });
 
-  // Tactile button glow feedback
-  if (!ungradable && grade !== null) {
-    const btn = document.getElementById('btn-grade- ' + grade) || document.querySelector(`[data-grade="${grade}"]`);
-    if (btn) {
-      btn.style.background = 'var(--dt-orange-vibrant)';
-      btn.style.color = '#FAF6F0';
-    }
-  }
-
-  const doneP = document.getElementById('done');
-  doneP.textContent = `Recording decision (${(ms / 1000).toFixed(1)} s)…`;
-
-  const body = {
-    grade: grade,
-    dme: document.getElementById('dme').checked ? 1 : 0,
-    ungradable: ungradable ? 1 : 0,
-    ms: ms,
-    ai_p_ref: {{ (r.grade.p_referable if r.grade else none)|tojson }},
-    ai_outcome: {{ r.outcome|tojson }}
-  };
-
-  const url = study ? `/api/study/${study.sid}/${study.k}` : '/api/review/{{ c.id }}';
-
+// ------------------------------------------------------------ load / save
+async function load(id) {
+  $('#state-error').hidden = true; $('#work').hidden = false; $('#decide').hidden = false;
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
-    const j = await res.json();
-    doneP.textContent = `Saved in ${(ms / 1000).toFixed(1)} s` + (j.final ? ` → Assigned: ${j.final.toUpperCase()}` : '') + ' · Advancing…';
-    setTimeout(() => {
-      location.href = study ? j.next : {{ (('/review/' ~ next_id) if next_id else '/review')|tojson }};
-    }, 400);
-  } catch (err) {
-    doneP.textContent = 'Error saving decision: ' + err.message;
-    stopped = false;
+    C = await DT.json(`/api/case/${id}?full=1`);
+  } catch (e) {
+    $('#err-id').textContent = id; $('#state-error').hidden = false; $('#work').hidden = true; $('#decide').hidden = true;
+    pause(true); return;
   }
+  caseId = C.id;
+  history.replaceState(null, '', `/review/${C.id}`);
+  document.title = `Case ${C.id} · DrishtiTrust`;
+  z = 1; px = 0; py = 0; applyZoom();
+  render();
+  t0 = performance.now(); paused = 0; pausedAt = null;
+  try {
+    const q = await DT.json('/api/queue');
+    const i = q.cases.findIndex(c => c.id === C.id);
+    $('#h-pos').textContent = i >= 0 ? `Case ${i + 1} of ${q.cases.length}` : (C.final ? 'Already reviewed' : '');
+  } catch (e) { /* position is optional */ }
+}
+async function nextCase(skipId) {
+  let q;
+  try { q = await DT.json('/api/queue'); } catch (e) { return location = '/review'; }
+  const n = q.cases.find(c => c.id !== skipId && !done.some(d => d.id === c.id));
+  if (!n) {
+    $('#work').hidden = true; $('#decide').hidden = true; $('#state-clear').hidden = false;
+    const ms = done.map(d => d.s).sort((a, b) => a - b);
+    $('#clear-summary').textContent = `${done.length} case${done.length === 1 ? '' : 's'} reviewed${ms.length ? ', median ' + ms[Math.floor(ms.length / 2)] + ' s' : ''}. New cases will appear in the queue without reloading.`;
+    pause(true); return;
+  }
+  load(n.id);
+}
+async function confirm() {
+  if (grade === null || busy) return;
+  busy = true;
+  const ms = Math.round(elapsed());
+  const body = { grade: grade === 'U' ? 0 : grade, dme: dme ? 1 : 0, ungradable: grade === 'U' ? 1 : 0, ms };
+  try {
+    if (STUDY) {
+      const r = await DT.post(`/api/study/${STUDY.sid}/${STUDY.k}`, { ...body, ai_p_ref: C.grade ? C.grade.p_referable : null, ai_outcome: C.outcome });
+      location = r.next; return;
+    }
+    let reviewer = ''; try { reviewer = localStorage.getItem('dt.reviewer') || ''; } catch (e) { /* ignore */ }
+    const appt = $('#appt') && $('#appt').value;
+    await DT.post(`/api/review/${caseId}`, { ...body, reviewer: reviewer || 'reviewer', appointment_date: appt || null });
+    const s = Math.round(ms / 1000);
+    done.push({ id: caseId, s });
+    DT.toast(`Saved case ${caseId} in ${s} s: ${outcomeOf(grade, dme)[0]}.`);
+    await nextCase(caseId);
+  } catch (e) {
+    DT.toast('Could not save. Nothing was recorded; try again.');
+  } finally { busy = false; }
 }
 
-// Button Click Event Listeners
-document.querySelectorAll('.decide button').forEach(b => {
-  b.onclick = () => submit(+b.dataset.grade, false);
+// ------------------------------------------------------------ wiring
+$$('.grade').forEach(b => b.onclick = () => setGrade(b.dataset.grade === 'U' ? 'U' : +b.dataset.grade));
+$('#dme').onclick = () => setDme(!dme);
+$$('#layers button').forEach(b => b.onclick = () => setLayer(b.dataset.layer));
+$('#confirm').onclick = confirm;
+$('#btn-evidence') && ($('#btn-evidence').onclick = () => $('#aside').classList.toggle('rv__aside--open'));
+if ($('#btn-retry')) $('#btn-retry').onclick = () => load(caseId);
+if ($('#btn-skip')) $('#btn-skip').onclick = () => { done.push({ id: caseId, s: 0, skipped: true }); nextCase(caseId); };
+if ($('#btn-pause')) $('#btn-pause').onclick = () => {
+  const on = !pausedAt; pause(on);
+  $('#paused').hidden = !on; $('#btn-pause').textContent = on ? 'Resume' : 'Pause';
+};
+addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (!$('#decide') || $('#decide').hidden) return;
+  const k = e.key.toLowerCase();
+  if (k.length === 1 && '01234'.includes(k)) setGrade(+k);
+  else if (k === 'u') setGrade('U');
+  else if (k === 'd') setDme(!dme);
+  else if (k === 'p') setLayer('photo');
+  else if (k === 'l') setLayer('lesions');
+  else if (k === 'h') setLayer('gradcam');
+  else if (k === 'enter') { e.preventDefault(); confirm(); }
+  else if (k === 'escape' && !STUDY) location = '/review';
 });
-document.getElementById('ungradable').onclick = () => submit(0, true);
-
-// Fast Keyboard Hotkey Protocol
-document.addEventListener('keydown', e => {
-  if (e.target && ['input', 'textarea', 'select'].includes(e.target.tagName.toLowerCase())) return;
-
-  if (e.key >= '0' && e.key <= '4') {
-    e.preventDefault();
-    submit(+e.key, false);
-  } else if (e.key === 'd' || e.key === 'D') {
-    e.preventDefault();
-    const dmeBox = document.getElementById('dme');
-    dmeBox.checked = !dmeBox.checked;
-  } else if (e.key === 'u' || e.key === 'U') {
-    e.preventDefault();
-    submit(0, true);
-  } else if (e.key === 'Tab') {
-    e.preventDefault();
-    cycleLayer();
-  } else if (e.key === '1') {
-    switchLayer('lesions');
-  } else if (e.key === '2') {
-    switchLayer('photo');
-  } else if (e.key === '3') {
-    switchLayer('gradcam');
-  }
-});
+if (C) render(); else load(caseId);
 </script>
 {% endblock %}

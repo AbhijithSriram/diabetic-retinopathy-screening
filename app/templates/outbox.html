@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}SMS outbox{% endblock %}
+{% block body %}
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(22) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><a href="/referrals">Referrals</a><span class="crumb">·</span><b>SMS outbox (mock)</b>
+  <span class="appbar__meta hide-phone">{{ DISCLAIMER }}</span>
+</header>
+<div class="pagehead pagehead--col">
+  <div class="rowwrap"><h1 class="h-page">SMS outbox</h1><span class="stamp">MOCK</span></div>
+  <div class="notice notice--plain"><svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"/></svg><div><b>No SMS gateway is connected.</b> Messages below are written by the referral engine and stored here. Nothing has been sent to any phone.</div></div>
+</div>
+<div class="page">
+  {% if rows %}
+  <div class="tablewrap"><table class="table table--card" id="outbox">
+    <thead><tr><th style="width:130px">Written</th><th style="width:90px">Referral</th><th style="width:100px">To</th><th>Text</th><th style="width:110px">Channel</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td class="num">{{ r.created|dmy }} {{ r.created|hm }}</td><td class="code">R-{{ r.referral_id }}</td><td>{{ {'patient': 'Patient', 'family': 'Family', 'asha': 'ASHA'}.get(r.recipient, r.recipient) }}</td><td>{{ r.text }}</td><td class="muted">{{ r.channel }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <div class="emptybox emptybox--center"><b class="h-sub">No messages yet</b><span class="muted">Messages are written when a referral is booked, explained, reminded or escalated.</span></div>
+  {% endif %}
+</div>
+{% endblock %}

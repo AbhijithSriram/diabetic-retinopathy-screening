@@ -1,0 +1,44 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo, shape %}
+{% block lang %}{{ lang }}{% endblock %}
+{% block title %}{{ L.your_check }}{% endblock %}
+{% block bodyclass %}patient{% endblock %}
+{% block head %}{% if c.view.kind == 'review' or (other and other.view.kind == 'review') %}<meta http-equiv="refresh" content="60">{% endif %}{% endblock %}
+{% block body %}
+{% set k = c.view.kind %}
+<header class="appbar appbar--patient">
+  {{ logo(24) }}<b>{{ L.your_check }}</b>
+  <nav class="seg seg--sm ml-auto" aria-label="Language">
+    <a href="?lang=en" role="button" aria-pressed="{{ 'true' if lang == 'en' else 'false' }}" lang="en">EN</a><a href="?lang=hi" role="button" aria-pressed="{{ 'true' if lang == 'hi' else 'false' }}" lang="hi">हिं</a><a href="?lang=ta" role="button" aria-pressed="{{ 'true' if lang == 'ta' else 'false' }}" lang="ta">த</a>
+  </nav>
+</header>
+<main class="patient__main">
+  <div class="muted">{{ L.checked_at.format(site=c.site, date=c.created|dmy) }} · <span class="code">{{ c.patient or '' }}</span></div>
+  <div class="banner banner--{{ k }}" data-kind="{{ k }}">{{ shape(k, 28) }}<div><div class="banner__title">{{ c.plabel[0] }}</div><div class="banner__sub">{{ c.plabel[1] }} · {{ L[c.eye] }}</div></div></div>
+  {% if c.view.books %}
+    {% if c.referral and c.referral.appointment %}
+    <div class="patient__cols">
+      <div class="apptbox"><span class="eyebrow">{{ L.appointment }}</span><b class="apptbox__date" id="appt-date">{{ c.referral.appointment }}</b><span>{{ c.referral.facility or '' }}{% if c.referral.specialty %}<br>{{ c.referral.specialty }}{% endif %}</span><span class="muted">{{ L.bring_slip }}{% if c.referral.transit %} {{ L.transport }}{% endif %}</span></div>
+    </div>
+    {% else %}
+    <div class="dashbox"><b>{{ L.not_booked }}</b> {{ L.not_booked_2 }}</div>
+    {% endif %}
+  {% endif %}
+  <p class="say say--patient" lang="{{ c.message.lang }}">{{ c.message.main }}</p>
+  {% if k == 'recall' %}<div class="card stack-0"><span class="muted small">{{ L.next_check }}</span><b class="h-sub">{{ next_check }}</b></div>{% endif %}
+  {% if k == 'review' %}<div class="waitline"><span class="dot dot--review"></span>{{ L.updates }}</div>{% endif %}
+  <div class="othereye">
+    <span class="muted">{{ L.other_eye }}</span>
+    {% if other %}<span class="outcome outcome--{{ other.view.kind }}">{{ shape(other.view.kind, 12) }}{{ L[other.eye] }}: {{ other.plabel[0] }}</span>
+    {% else %}<span class="muted">{{ L.left if c.eye == 'right' else L.right }}: {{ L.not_screened }}</span>{% endif %}
+  </div>
+  {% if c.view.books or k == 'recall' %}<a href="/slip/{{ token }}" class="strong" target="_blank" rel="noopener">{{ L.print }}</a>{% endif %}
+</main>
+<footer class="patient__foot" lang="{{ lang }}">{{ L.disclaimer }}</footer>
+{% endblock %}
+{% block scripts %}
+<script>
+const d = document.getElementById('appt-date');
+if (d) d.textContent = new Date(d.textContent + 'T00:00:00').toLocaleDateString({{ {'en': 'en-GB', 'hi': 'hi-IN', 'ta': 'ta-IN'}[lang]|tojson }}, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+</script>
+{% endblock %}

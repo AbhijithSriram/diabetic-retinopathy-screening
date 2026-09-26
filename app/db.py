@@ -52,6 +52,9 @@ def conn() -> sqlite3.Connection:
 def init():
     with conn() as c:
         c.executescript(SCHEMA)
+        cols = {r[1] for r in c.execute("PRAGMA table_info(study_sessions)")}
+        if "practice" not in cols:  # practice sessions: answers are not saved
+            c.execute("ALTER TABLE study_sessions ADD COLUMN practice INT DEFAULT 0")
 
 
 def new_token() -> str:

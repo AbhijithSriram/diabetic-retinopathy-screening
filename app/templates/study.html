@@ -1,81 +1,56 @@
-{% extends "base.html" %}{% set active = 'study' %}
-{% block title %}Reader Study Rig · DrishtiTrust{% endblock %}
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}Reader study{% endblock %}
 {% block body %}
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-  <div>
-    <h1>Ophthalmologist Reader Study Rig</h1>
-    <p class="muted" style="margin:0;">Measuring real-world ophthalmologist validation time and diagnostic accuracy for problem statement SIH26038.</p>
-  </div>
-  <div>
-    <span class="pill review" style="font-size:12.5px;">Target: &lt; 30.0 s / Case</span>
-  </div>
-</div>
-
-<div class="panel">
-  <h2>Study Protocol & Methodology</h2>
-  <p class="small muted" style="line-height:1.6;margin-bottom:16px;">
-    Problem statement <b>SIH26038 (MathWorks)</b> calls for clinical AI reports that enable <i>"ophthalmologist validation in under 30 seconds for a human-in-the-loop workflow"</i>. 
-    No synthetic simulation or test set can prove this — only practicing ophthalmologists interacting with the live review screen can. 
-    Participating doctors review 40 grade-stratified retina photographs from public research datasets (Messidor-2 and IDRiD). No hospital patient data is accessed.
-  </p>
-
-  {% if items %}
-  <form method="post" action="/study/start" class="row" style="background:var(--dt-surface-sunken);padding:18px;border-radius:var(--dt-radius-md);border:1px solid var(--dt-border-strong);">
-    <div>
-      <label for="f-reader">Reader Initials / Anonymized ID</label>
-      <input type="text" id="f-reader" name="reader" placeholder="e.g. DR-AN" required autocomplete="off">
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(22) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><b>Reader study</b>
+  <span class="appbar__meta hide-phone">{{ DISCLAIMER }}</span>
+</header>
+<div class="study">
+  <form class="card study__new stack-lg" method="post" action="/study/start" id="study-form">
+    <h1 class="h-section">New session</h1>
+    <p class="muted">The reader grades each image with the normal review screen. Time per image is recorded from when the image appears to Enter. Reference grades stay hidden until the end.</p>
+    {% if n_items %}
+    <div class="field"><label for="f-reader">Reader</label><span class="hint">Initials or a study ID. Shown in results.</span><input class="input" id="f-reader" name="reader" required autocomplete="off" placeholder="Reader-01"></div>
+    <div class="field"><label id="n-label">Images</label><span class="hint">Drawn at random from study_set.csv ({{ n_items }} available).</span>
+      <div class="choices choices--3" role="radiogroup" aria-labelledby="n-label" id="f-n">
+        {% for n in [20, 40, 80] %}<button type="button" class="choice choice--center" role="radio" aria-checked="{{ 'true' if n == 40 else 'false' }}" data-n="{{ n }}" {{ 'disabled' if n > n_items }}>{{ n }}</button>{% endfor %}
+      </div>
+      <input type="hidden" name="n" id="f-n-val" value="{{ [40, n_items]|min }}">
     </div>
-    <div>
-      <label for="f-n">Number of Stratified Cases</label>
-      <input type="text" id="f-n" name="n" value="40" required>
-    </div>
-    <div style="align-self:end;">
-      <button class="primary" type="submit" style="padding:10px 24px;width:100%;">
-        Start Reading Session →
-      </button>
-    </div>
+    <input type="hidden" name="practice" id="f-practice" value="0">
+    <button class="btn btn--primary btn--wide" type="submit">Start session</button>
+    <p class="muted small show-phone">Grading sessions need a screen at least 1280 px wide so image size is the same for every reader.</p>
+    {% else %}
+    <div class="notice notice--plain"><div><b>No study set.</b> Add <span class="code">app/study_set.csv</span> (image_id, path, grade, dme, source) to run a session.</div></div>
+    {% endif %}
   </form>
-  <p class="small muted" style="margin-top:10px;">
-    {{ items|length }} candidate images available in stratified study pool (<code>app/study_set.csv</code>).
-  </p>
-  {% else %}
-  <div class="notice">
-    <b>Note:</b> No candidate study set found in <code>app/study_set.csv</code>. Run <code>python scripts/make_study_set.py</code> after dataset preparation to populate the stratified study set.
-  </div>
-  {% endif %}
+  <section class="card stack study__sessions">
+    <h2 class="h-section">Sessions</h2>
+    {% if sessions %}
+    <div class="tablewrap"><table class="table" id="sessions">
+      <thead><tr><th>Session</th><th>Reader</th><th>Started</th><th class="r">Graded</th><th></th></tr></thead>
+      <tbody>{% for s in sessions %}<tr><td class="code">S-{{ s.id }}</td><td>{{ s.reader }}</td><td class="num">{{ s.created|dmy }} {{ s.created|hm }}</td><td class="r num">{{ s.n }} / {{ s.total }}</td>
+        <td class="r">{% if s.n < s.total %}<a class="strong" href="/study/{{ s.id }}/resume">Resume</a>{% else %}<a class="strong" href="/study-results/{{ s.id }}">Results</a>{% endif %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="muted">No sessions yet.</p>{% endif %}
+    {% if n_items %}<div class="dashbox small">First session? <button type="button" class="linkbtn" id="btn-practice">Run a 5-image practice</button> first so the reader learns the keys; practice answers are not saved.</div>{% endif %}
+  </section>
 </div>
-
-{% if sessions %}
-<div class="panel" style="margin-top:16px;">
-  <h2>Completed Clinical Reader Sessions</h2>
-  <div style="overflow-x:auto;">
-    <table>
-      <thead>
-        <tr>
-          <th>Session ID</th>
-          <th>Reader Initials</th>
-          <th>Date Recorded</th>
-          <th>Cases Answered</th>
-          <th style="text-align:right;">Statistical Report</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in sessions %}
-        <tr>
-          <td><b style="font-family:var(--dt-font-mono);">#{{ s.id }}</b></td>
-          <td><b>{{ s.reader }}</b></td>
-          <td><span class="small" style="font-family:var(--dt-font-mono);">{{ s.created|ago }}</span></td>
-          <td><span class="pill review">{{ s.n }} cases</span></td>
-          <td style="text-align:right;">
-            <a class="btn primary" href="/study-results/{{ s.id }}" style="padding:5px 12px;font-size:12.5px;">
-              View Statistical Analysis →
-            </a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
+<div class="disclaimer show-phone">{{ DISCLAIMER }}</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('#f-n .choice').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#f-n .choice').forEach(x => x.setAttribute('aria-checked', String(x === b)));
+  document.getElementById('f-n-val').value = b.dataset.n;
+});
+const p = document.getElementById('btn-practice');
+if (p) p.onclick = () => {
+  const r = document.getElementById('f-reader');
+  if (!r.value.trim()) r.value = 'Practice';
+  document.getElementById('f-practice').value = '1';
+  document.getElementById('study-form').requestSubmit();
+};
+</script>
 {% endblock %}

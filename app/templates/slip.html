@@ -1,126 +1,57 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Eye Referral Slip · DrishtiTrust</title>
-<link rel="icon" type="image/svg+xml" href="/static/logo.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css">
-<style>
-@media print {
-  body { background: #FAF6F0 !important; }
-  .panel { border: 1.5px solid #231B1A !important; box-shadow: none !important; }
-  .noprint { display: none !important; }
-}
-</style>
-</head>
-<body>
-<main style="max-width:760px;margin:24px auto;">
-<div class="panel" style="padding:28px 32px;background:var(--dt-surface);">
-  <!-- Slip Brand Header -->
-  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--dt-border-strong);padding-bottom:16px;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <img src="/static/logo.svg" alt="DrishtiTrust Logo" style="width:44px;height:44px;">
-      <div>
-        <div style="font-size:20px;font-weight:700;color:var(--dt-ink-heading);letter-spacing:-0.2px;">DrishtiTrust Screening Programme</div>
-        <div class="small muted">Rural Diabetic Retinopathy Early Detection Initiative · Smart India Hackathon 2026</div>
-      </div>
-    </div>
-    <div>
-      <span class="pill {{ 'urgent' if r.urgent else 'review' }}" style="font-size:12.5px;padding:5px 12px;">
-        {% if r.urgent %}
-        URGENT — Within {{ cfg.urgent_days }} Days
-        {% else %}
-        Routine Referral — Within {{ cfg.routine_days }} Days
-        {% endif %}
-      </span>
-    </div>
+{% extends "_base.html" %}
+{% block title %}Referral slip{% endblock %}
+{% block bodyclass %}slippage{% endblock %}
+{% block body %}
+{% set k = c.view.kind %}
+<div class="slipbar no-print"><button type="button" class="btn btn--primary" onclick="print()">Print</button><span class="muted small">A5 portrait, black and white. Choose A4 in the print dialog if needed.</span></div>
+<article class="slip" data-kind="{{ k }}">
+  <div class="slip__head">
+    <div class="stack-0"><b class="slip__title">Referral slip</b><span lang="hi" class="slip__sub">रेफ़रल पर्ची</span><span lang="ta" class="slip__sub">பரிந்துரைச் சீட்டு</span></div>
+    <div class="slip__meta">DrishtiTrust · {{ c.site }}<br>Screened {{ c.created|dmy }}<br>Case <span class="code">{{ c.id }}</span></div>
   </div>
-
-  <h1 style="font-size:20px;margin-bottom:18px;text-align:center;">
-    Eye Referral Slip &middot; नेत्र रेफ़रल पर्ची
-  </h1>
-
-  <!-- Patient & Handoff Table -->
-  <table style="margin-bottom:20px;">
-    <tbody>
-      <tr>
-        <th style="width:28%;">Patient Identifier</th>
-        <td><b style="font-family:var(--dt-font-mono);font-size:15px;color:var(--dt-ink-heading);">{{ c.patient or 'Anonymized' }}</b> ({{ c.eye|capitalize }} Eye)</td>
-      </tr>
-      <tr>
-        <th>Screening Facility</th>
-        <td><b>{{ c.site }}</b></td>
-      </tr>
-      <tr>
-        <th>Priority Window</th>
-        <td>
-          {% if r.urgent %}
-          <b style="color:var(--dt-crimson-primary);">URGENT — Evaluation required within {{ cfg.urgent_days }} days</b>
-          {% else %}
-          <b>Routine Referral — Evaluation within {{ cfg.routine_days }} days</b>
-          {% endif %}
-        </td>
-      </tr>
-      <tr>
-        <th>Clinical Reason</th>
-        <td>
-          {% if r.reason == 'ungradable' %}
-          A clear fundus photograph could not be obtained after 3 attempts; in-person slit lamp evaluation is required to inspect the retina and rule out dense cataract or media opacity.
-          {% else %}
-          Retinal imaging identified signs of diabetic microvascular damage requiring specialist evaluation.
-          {% endif %}
-          {% if r.rules and r.rules.dme_flag %}
-          <div style="margin-top:4px;font-weight:600;color:var(--dt-crimson-primary);">
-            • Warning: Hard exudates detected near the central fovea (high risk of Diabetic Macular Oedema).
-          </div>
-          {% endif %}
-        </td>
-      </tr>
-      <tr>
-        <th>Referred To</th>
-        <td>District Eye Hospital / Ophthalmology Outpatient Department</td>
-      </tr>
-      <tr>
-        <th>Patient Digital Status</th>
-        <td>
-          <code style="font-family:var(--dt-font-mono);font-size:13.5px;background:var(--dt-surface-sunken);padding:3px 8px;border-radius:4px;color:var(--dt-orange-primary);">{{ base }}s/{{ c.token }}</code>
-          <div class="small muted" style="margin-top:3px;">No password or login required. Keep this slip safe and present it at the hospital desk.</div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-
-  <!-- Clinical Telemetry for Eye Specialist -->
-  <div style="background:var(--dt-surface-sunken);padding:14px 16px;border-radius:var(--dt-radius-sm);border:1px solid var(--dt-border-strong);margin-bottom:16px;">
-    <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--dt-orange-primary);margin-bottom:4px;">
-      For the Examining Ophthalmologist / Hospital Specialist:
-    </div>
-    <div class="small" style="line-height:1.6;">
-      • AI Tri-Ensemble Referable DR Probability: <b>{{ '%.1f%%' % (100 * r.grade.p_referable) if r.grade else '—' }}</b><br>
-      {% if r.grade_set %}• 90% Plausible Grade Range: <b>{{ r.grade_set|join(' to ') }}</b><br>{% endif %}
-      {% if r.rules %}
-      • Automated Lesion Counts: <b>MA: {{ r.rules.counts.MA }}</b>, <b>HE: {{ r.rules.counts.HE }}</b>, <b>EX: {{ r.rules.counts.EX }}</b>, <b>SE: {{ r.rules.counts.SE }}</b><br>
-      • Nearest Hard Exudate to Fovea: <b>{{ r.rules.nearest_exudate_dd or 'None' }} Disc Diameters</b>
+  <div class="slip__two">
+    <div class="slip__box"><span class="slip__lab">Patient code</span><b class="code slip__code">{{ c.patient or '—' }}</b></div>
+    <div class="slip__box"><span class="slip__lab">Eye</span><b class="slip__eye">{{ 'Right eye' if c.eye == 'right' else 'Left eye' }}</b></div>
+  </div>
+  <div class="slip__outcome">
+    <svg width="26" height="24" viewBox="0 0 16 16" aria-hidden="true">
+      {%- if k in ('refer', 'urgent') -%}<polygon points="8,1.5 15,14.5 1,14.5" fill="{{ '#000' if k == 'urgent' else 'none' }}" stroke="#000" stroke-width="2"/>
+      {%- elif k == 'ungradable' -%}<rect x="2" y="2" width="12" height="12" fill="none" stroke="#000" stroke-width="2"/>
+      {%- elif k == 'review' -%}<polygon points="8,1 15,8 8,15 1,8" fill="none" stroke="#000" stroke-width="2"/>
+      {%- else -%}<circle cx="8" cy="8" r="6.5" fill="none" stroke="#000" stroke-width="2"/>{%- endif -%}
+    </svg>
+    <div class="stack-0"><b class="slip__line">{{ line[0] }}</b><span lang="hi" class="slip__sub">{{ line[1] }}</span><span lang="ta" class="slip__sub">{{ line[2] }}</span></div>
+  </div>
+  <div class="slip__appt">
+    <div class="stack-0">
+      <span class="slip__lab">Appointment · <span lang="hi">अपॉइंटमेंट</span> · <span lang="ta">சந்திப்பு</span></span>
+      {% if c.referral and c.referral.appointment %}
+      <b class="slip__date" id="slip-date">{{ c.referral.appointment }}</b>
+      <span>{{ c.referral.facility or '' }}{% if c.referral.specialty %}<br>{{ c.referral.specialty }}{% endif %}</span>
+      {% if c.referral.transit %}<span class="small">Transport requested</span>{% endif %}
+      {% else %}
+      <b class="slip__date">Not booked yet</b><span class="small">Your health worker will contact you.</span>
       {% endif %}
     </div>
+    <div class="slip__qr" title="{{ url }}">{{ qr|safe }}</div>
   </div>
-
-  <p class="small muted" style="text-align:center;margin-bottom:18px;">
-    Research prototype. Not an autonomous medical device. An ophthalmologist makes the final diagnostic and treatment decision.
-  </p>
-
-  <!-- Print Action Controls -->
-  <div class="noprint" style="display:flex;justify-content:center;gap:12px;">
-    <button class="primary" type="button" onclick="window.print()" style="padding:10px 24px;">
-      🖨️ Print Referral Slip
-    </button>
-    <a href="/" class="btn">Back to Screening</a>
+  <div class="slip__doctor">
+    <b class="slip__caps">FOR THE EYE DOCTOR</b>
+    {% if c.grade %}<span>AI grade: most likely <b>{{ c.grade.most_likely }}</b>; 90% range {{ (c.grade_set or [])|join(' – ') }}; P(referable) <b>{{ '%.3f'|format(c.grade.p_referable) }}</b></span>{% else %}<span>No AI grade (photo not gradable, or grading was off).</span>{% endif %}
+    {% if c.rules %}<span>Lesions: MA {{ c.rules.counts.MA }} · HE {{ c.rules.counts.HE }} · EX {{ c.rules.counts.EX }} · SE {{ c.rules.counts.SE }}. Macular oedema flag: {{ 'yes' if c.rules.dme_flag else 'no' }}{% if c.rules.nearest_exudate_dd is not none %} (nearest exudate {{ '%.2f'|format(c.rules.nearest_exudate_dd) }} DD){% endif %}.</span>{% endif %}
+    <span>{% if c.review %}Specialist review: {{ 'ungradable' if c.review.ungradable else ICDR[c.review.grade] }}{{ ', macular oedema suspected' if c.review.dme }}.{% elif c.outcome == 'review' %}Specialist review: pending.{% else %}Specialist review: not required (automatic {{ c.outcome }}).{% endif %}</span>
   </div>
-</div>
-</main>
-</body>
-</html>
+  <div class="slip__foot">
+    <span>Bring this slip to the hospital · <span lang="hi">यह पर्ची अस्पताल लेकर जाएं</span> · <span lang="ta">இந்தச் சீட்டை மருத்துவமனைக்குக் கொண்டு வாருங்கள்</span></span>
+    <span>{{ DISCLAIMER }}</span>
+    <span lang="hi">शोध प्रोटोटाइप। यह मेडिकल उपकरण नहीं है। अंतिम निर्णय डॉक्टर लेंगे।</span>
+    <span lang="ta">ஆராய்ச்சி முன்மாதிரி. மருத்துவ சாதனம் அல்ல. இறுதி முடிவு மருத்துவருடையது.</span>
+  </div>
+</article>
+{% endblock %}
+{% block scripts %}
+<script>
+const d = document.getElementById('slip-date');
+if (d) d.textContent = DT.day(d.textContent);
+</script>
+{% endblock %}

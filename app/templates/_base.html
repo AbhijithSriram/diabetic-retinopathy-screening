@@ -1,0 +1,34 @@
+{# Shared page shell. Every screen: one stylesheet, self-hosted Noto fonts, the
+   disclaimer, and static/app.js (outcome shapes, toasts, fetch, read aloud). #}
+{% macro logo(size=24) -%}
+<svg class="logo" width="{{ size }}" height="{{ size }}" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="19" stroke="#0a5a86" stroke-width="4"/><circle cx="24" cy="24" r="11" stroke="#0a5a86" stroke-width="3"/><circle cx="24" cy="24" r="5" fill="#0a5a86"/></svg>
+{%- endmacro %}
+{% macro shape(kind, size=14) -%}
+{%- if kind == 'recall' -%}<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/></svg>
+{%- elif kind == 'review' -%}<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,0.5 15.5,8 8,15.5 0.5,8" fill="currentColor"/></svg>
+{%- elif kind in ('refer', 'urgent') -%}<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,1 15.5,15 0.5,15" fill="currentColor"/></svg>
+{%- elif kind == 'ungradable' -%}<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" fill="currentColor"/></svg>
+{%- else -%}<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+{%- endif -%}
+{%- endmacro %}
+{% macro info_icon() -%}
+<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex:none;margin-top:2px"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="7.25" y="7" width="1.5" height="4.5" fill="currentColor"/><rect x="7.25" y="4.2" width="1.5" height="1.5" fill="currentColor"/></svg>
+{%- endmacro %}
+<!doctype html>
+<html lang="{% block lang %}en{% endblock %}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}DrishtiTrust{% endblock %} · DrishtiTrust</title>
+<link rel="preload" href="/static/fonts/NotoSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/drishti.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='19' stroke='%230a5a86' stroke-width='4' fill='none'/%3E%3Ccircle cx='24' cy='24' r='5' fill='%230a5a86'/%3E%3C/svg%3E">
+{% block head %}{% endblock %}
+</head>
+<body class="{% block bodyclass %}{% endblock %}">
+{% block body %}{% endblock %}
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

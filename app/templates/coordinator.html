@@ -1,0 +1,128 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}Referrals{% endblock %}
+{% block body %}
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(22) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><b>Referrals</b><span class="crumb">·</span><a href="/outbox">SMS outbox (mock)</a>
+  <span class="appbar__meta hide-phone">{{ DISCLAIMER }}</span>
+</header>
+<div class="pagehead pagehead--tight">
+  <h1 class="h-page">Referrals</h1>
+  <div class="chips" role="group" aria-label="Filter" id="filters"></div>
+  <span class="muted small ml-auto hide-phone">Urgent first, then earliest due</span>
+</div>
+<div class="coord" id="coord">
+  <div class="coord__list">
+    <table class="table table--card hide-phone">
+      <thead><tr><th>Referral</th><th>Patient · site</th><th>Type</th><th>State</th><th>Due</th><th>Contact</th><th>Next action</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="cardlist show-phone" id="cards"></div>
+    <div class="emptybox emptybox--center" id="empty" hidden><b class="h-sub">No open referrals</b><span class="muted">A referral appears here when a health worker's result, or an eye doctor's decision, is "refer" or "ungradable".</span><button type="button" class="linkbtn" data-filter="Closed">Show closed referrals</button></div>
+  </div>
+  <aside class="coord__panel" id="panel" hidden>
+    <div class="coord__sec stack-xs">
+      <div class="rowspread"><b class="code h-sub" id="p-id"></b><span id="p-type"></span></div>
+      <span id="p-who"></span>
+      <span class="muted small" id="p-appt"></span>
+      <a class="small" id="p-links" target="_blank" rel="noopener"></a>
+    </div>
+    <div class="coord__sec stack-sm"><div class="eyebrow-caps">Contact now</div><div class="tiers" id="p-tiers"></div></div>
+    <div class="coord__sec coord__sec--grow stack-sm"><div class="eyebrow-caps">History</div><ol class="history" id="p-hist"></ol></div>
+    <div class="coord__move stack-sm">
+      <div class="eyebrow-caps">Move to</div>
+      <input class="input" id="p-note" placeholder="Note (optional)" aria-label="Note">
+      <label class="stack-0" id="p-date-wrap" hidden><span class="small muted">Appointment date (needed for Booked)</span><input type="date" class="input" id="p-date"></label>
+      <div class="rowwrap" id="p-moves"></div>
+      <span class="small muted" id="p-move-note"></span>
+    </div>
+  </aside>
+</div>
+<div class="disclaimer show-phone">{{ DISCLAIMER }}</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let D = {{ data|tojson }};
+let filter = 'All open', sel = null;
+const $ = s => document.querySelector(s);
+const F = ['All open', 'Needs action', 'Urgent', 'Missed / escalated', 'Closed'];
+const TYPE = { urgent: ['Urgent refer', 'urgent'], ungradable: ['Ungradable', 'ungradable'], refer: ['Refer', 'refer'] };
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const TIER = { patient: 'Patient', family: 'Family', asha: 'ASHA' };
+function nextAction(r) {
+  return { flagged: 'Explain to patient', explained: 'Book the visit', booked: r.appointment ? `Remind before ${DT.day(r.appointment).replace(/ \d{4}$/, '')}` : 'Remind before the visit',
+           reminded: 'Confirm attendance', missed: 'Escalate contact', escalated: r.tier === 'family' ? 'Call family to rebook' : 'ASHA home visit',
+           attended: 'Close', closed: '—' }[r.state];
+}
+function pass(r) {
+  if (filter === 'Closed') return r.state === 'closed';
+  if (r.state === 'closed') return false;
+  if (filter === 'Urgent') return r.kind === 'urgent';
+  if (filter === 'Missed / escalated') return ['missed', 'escalated'].includes(r.state);
+  if (filter === 'Needs action') return ['flagged', 'explained', 'escalated', 'attended', 'missed'].includes(r.state);
+  return true;
+}
+function badge(kind) { const [t, c] = TYPE[kind]; return `<span class="badge badge--${c} badge--sm"><span class="badge__shape"></span>${t}</span>`; }
+function due(r) {
+  if (['attended', 'closed'].includes(r.state)) return ['—', ''];
+  const left = (r.due - D.now) / 86400;
+  return [new Date(r.due * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), left <= 14 ? 'due-soon' : ''];
+}
+function render() {
+  $('#filters').innerHTML = F.map(f => `<button type="button" class="chip" aria-pressed="${f === filter}" data-filter="${f}">${f}</button>`).join('');
+  const rows = D.referrals.filter(pass);
+  if (!sel || !rows.some(r => r.id === sel)) sel = rows.length ? rows[0].id : null;
+  $('#rows').innerHTML = rows.map(r => { const [d, dc] = due(r); return `
+    <tr data-id="${r.id}" class="${r.id === sel ? 'row--sel' : ''}">
+      <td class="code">R-${r.id}</td><td><span class="code">${DT.esc(r.patient || '—')}</span> · ${DT.esc(r.site)} · ${r.eye === 'right' ? 'Right' : 'Left'}</td>
+      <td>${badge(r.kind)}</td><td class="strong">${cap(r.state)}</td><td class="${dc}">${d}</td><td>${TIER[r.tier] || r.tier}</td><td>${nextAction(r)}</td></tr>`; }).join('');
+  $('#cards').innerHTML = rows.map(r => { const [d] = due(r); const m = r.moves[0]; return `
+    <div class="qcard ${r.kind === 'urgent' ? 'qcard--urgent' : ''}" data-id="${r.id}">
+      <span class="rowspread"><b class="code">R-${r.id} · ${DT.esc(r.patient || '—')}</b>${badge(r.kind)}</span>
+      <span><b>${cap(r.state)}</b> · due ${d} · ${(TIER[r.tier] || r.tier).toLowerCase()}</span>
+      ${m ? `<button type="button" class="btn btn--secondary btn--sm align-start" data-card-move="${m}">Mark ${m}</button>` : ''}</div>`; }).join('');
+  $('#empty').hidden = rows.length > 0;
+  document.querySelectorAll('#rows tr, #cards .qcard').forEach(t => t.onclick = e => {
+    const mv = e.target.closest('[data-card-move]');
+    sel = +t.dataset.id;
+    if (mv) return move(mv.dataset.cardMove);
+    render();
+  });
+  document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { filter = b.dataset.filter; sel = null; render(); });
+  panel();
+}
+function panel() {
+  const r = D.referrals.find(x => x.id === sel);
+  $('#panel').hidden = !r;
+  if (!r) return;
+  $('#p-id').textContent = `R-${r.id}`; $('#p-type').innerHTML = badge(r.kind);
+  $('#p-who').innerHTML = `<span class="code">${DT.esc(r.patient || '—')}</span> · ${DT.esc(r.site)} · ${r.eye === 'right' ? 'Right' : 'Left'} eye`;
+  $('#p-appt').textContent = r.appointment ? `Booked: ${r.facility || 'hospital'}, ${DT.day(r.appointment)}` : 'Not booked';
+  $('#p-links').href = `/s/${r.token}`; $('#p-links').textContent = 'Patient status page';
+  const tiers = ['patient', 'family', 'asha'], ti = tiers.indexOf(r.tier);
+  $('#p-tiers').innerHTML = tiers.map((t, i) => `<span class="tier ${i === ti ? 'tier--on' : i < ti ? 'tier--past' : ''}">${TIER[t]}</span>`).join('');
+  $('#p-hist').innerHTML = r.history.slice().reverse().map(h => `<li><span class="dot ${['missed', 'escalated'].includes(h.state) ? 'dot--refer' : ['closed', 'attended'].includes(h.state) ? 'dot--recall' : 'dot--info'}"></span><span><b>${cap(h.state)}</b><br><span class="muted">${DT.esc(h.note || (h.facility ? h.facility + (h.appointment ? ', ' + h.appointment : '') : '—'))}</span></span><span class="muted num">${new Date(h.t * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span></li>`).join('');
+  $('#p-moves').innerHTML = r.moves.map((m, i) => `<button type="button" class="btn ${i === 0 ? 'btn--primary' : 'btn--secondary'}" data-move="${m}">${cap(m)}</button>`).join('');
+  $('#p-date-wrap').hidden = !r.moves.includes('booked');
+  $('#p-move-note').textContent = r.moves.length ? (r.moves.includes('escalated') ? 'Escalating moves the contact to the next tier and writes a mock SMS.' : 'Each move is saved to history and may write a mock SMS.') : 'Closed. No further moves.';
+  document.querySelectorAll('[data-move]').forEach(b => b.onclick = () => move(b.dataset.move));
+}
+async function move(to) {
+  const r = D.referrals.find(x => x.id === sel);
+  const date = $('#p-date').value;
+  if (to === 'booked' && !date) {
+    render(); $('#panel').scrollIntoView({ block: 'start' }); $('#p-date').focus();
+    return DT.toast('Choose the appointment date, then press Booked.');
+  }
+  try {
+    await DT.post(`/api/referral/${r.id}`, { to, note: $('#p-note').value, appointment: to === 'booked' ? date : null });
+    $('#p-note').value = ''; $('#p-date').value = '';
+    D = await DT.json('/api/referrals');
+    DT.toast(`R-${r.id} moved to ${to}.`);
+    render();
+  } catch (e) { DT.toast(`Could not move R-${r.id}: ${e.detail || e.message}`); }
+}
+render();
+setInterval(async () => { if (document.activeElement && ['INPUT'].includes(document.activeElement.tagName)) return; try { D = await DT.json('/api/referrals'); render(); } catch (e) { /* keep */ } }, 15000);
+</script>
+{% endblock %}

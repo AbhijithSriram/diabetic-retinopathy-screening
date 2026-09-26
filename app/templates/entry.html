@@ -1,0 +1,22 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}Who are you?{% endblock %}
+{% block body %}
+<header class="appbar appbar--wide">
+  {{ logo(26) }}<b class="appbar__brand">DrishtiTrust</b><span class="appbar__meta-left hide-phone">Diabetic eye screening</span>
+  <a href="/about" class="appbar__link hide-phone">About and evidence</a>
+</header>
+<main class="entry">
+  <h1 class="entry__title">Who are you?</h1>
+  <nav class="rolelist" aria-label="Choose your role">
+    <a href="/screen" class="rolelist__item" data-role="health-worker"><b>Health worker</b><span>Take eye photos at the PHC and tell the patient what to do</span><i aria-hidden="true">→</i></a>
+    <a href="/review" class="rolelist__item" data-role="specialist"><b>Eye specialist</b><span>Review cases the AI sent for a check</span><i aria-hidden="true">→</i></a>
+    <a href="/referrals" class="rolelist__item" data-role="coordinator"><b>Referral coordinator</b><span>Follow referrals until the patient is seen</span><i aria-hidden="true">→</i></a>
+    <a href="/dashboard" class="rolelist__item" data-role="programme"><b>Programme manager</b><span>Outcomes, review times and the referral funnel</span><i aria-hidden="true">→</i></a>
+    <a href="/study" class="rolelist__item" data-role="researcher"><b>Researcher</b><span>Run a timed reader study</span><i aria-hidden="true">→</i></a>
+  </nav>
+  <p class="muted">Patients: open the link in your SMS or on your slip. You do not need an account.</p>
+  <a href="/about" class="show-phone entry__about">About and evidence</a>
+  <p class="entry__foot">{{ DISCLAIMER }} <span class="hide-phone">· Smart India Hackathon 2026, problem statement 26038</span></p>
+</main>
+{% endblock %}

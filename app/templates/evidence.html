@@ -1,0 +1,69 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}Evidence{% endblock %}
+{% block bodyclass %}bg-white{% endblock %}
+{% macro pct(v) %}{{ '%.1f'|format(100 * v) }}%{% endmacro %}
+{% macro ci(v) %}({{ '%.1f'|format(100 * v[1]) }}–{{ '%.1f'|format(100 * v[2]) }}){% endmacro %}
+{% block body %}
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(22) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><a href="/dashboard">Dashboard</a><span class="crumb">·</span><b>Evidence</b>
+</header>
+<main class="evidence">
+  <h1 class="h-hero">How well does it find referable diabetic retinopathy?</h1>
+  <p class="lead">Tested on two external photo sets the models were not trained on. Referable means moderate NPDR or worse. The decision threshold was fixed before these sets were scored.</p>
+
+  {% if ev.m2 %}{% set m = ev.m2 %}
+  <section class="stack">
+    <h2 class="h-section">Messidor-2 · France · {{ m.n }} exams</h2>
+    <div class="tablewrap"><table class="table table--plain" id="m2">
+      <thead><tr><th></th><th class="r">Sensitivity</th><th class="r">Specificity</th><th class="r">AUC</th></tr></thead>
+      <tbody>
+        <tr><td><b>DrishtiTrust</b></td><td class="r"><b>{{ pct(m.sens[0]) }}</b> <span class="muted">{{ ci(m.sens) }}</span></td><td class="r"><b>{{ pct(m.spec[0]) }}</b> <span class="muted">{{ ci(m.spec) }}</span></td><td class="r"><b>{{ '%.3f'|format(m.auc[0]) }}</b></td></tr>
+        <tr><td>IDx-DR, published, same photos</td><td class="r">{{ pct(m.ref.sensitivity) }}</td><td class="r">{{ pct(m.ref.specificity) }}</td><td class="r muted">—</td></tr>
+      </tbody>
+    </table></div>
+    {# forest plot, 80–100% #}
+    <div class="forest" aria-label="Confidence intervals against IDx-DR">
+      <span></span><div class="forest__axis"><span style="left:0">80%</span><span style="left:25%">85%</span><span style="left:50%">90%</span><span style="left:75%">95%</span><span style="left:100%">100%</span></div>
+      {% for lab, v, r in [('Sensitivity', m.sens, m.ref.sensitivity), ('Specificity', m.spec, m.ref.specificity)] %}
+      <span class="strong">{{ lab }}</span>
+      <div class="forest__row">
+        <div class="forest__ci" style="left:{{ (100 * v[1] - 80) * 5 }}%;width:{{ (v[2] - v[1]) * 500 }}%"></div>
+        <div class="forest__pt" style="left:{{ (100 * v[0] - 80) * 5 }}%"></div>
+        <div class="forest__ref" style="left:{{ (100 * r - 80) * 5 }}%"></div>
+      </div>
+      {% endfor %}
+      <span></span><div class="rowwrap small muted"><span class="legendkey"><span class="sq"></span>DrishtiTrust with 95% CI</span><span class="legendkey"><span class="ring"></span>IDx-DR published value</span></div>
+    </div>
+    <div class="callout"><b>Statistically indistinguishable from IDx-DR, not better.</b> Both of IDx-DR's published values fall inside DrishtiTrust's 95% confidence intervals.</div>
+  </section>
+  {% endif %}
+
+  {% if ev.idrid %}{% set i = ev.idrid %}
+  <section class="stack">
+    <h2 class="h-section">IDRiD · India · {{ i.n }} images</h2>
+    <div class="kpis kpis--3">
+      <div class="kpi kpi--plain"><span>Sensitivity</span><b class="num">{{ pct(i.sens[0]) }}</b></div>
+      <div class="kpi kpi--plain"><span>Specificity</span><b class="num">{{ pct(i.spec[0]) }}</b></div>
+      <div class="kpi kpi--plain"><span>AUC</span><b class="num">{{ '%.3f'|format(i.auc[0]) }}</b></div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if ev.sim %}{% set s = ev.sim %}
+  <section class="stack">
+    <div class="rowwrap"><h2 class="h-section">Specialist workload</h2><span class="stamp">SIMULATED</span></div>
+    <p>From a {{ s.days }}-day simulation of one district: {{ '{:,}'.format(s.screenings) }} screenings a year across {{ s.sites }} sites, {{ (100 * s.online)|round|int }}% of the time online. These are model outputs, not observed data.</p>
+    <div class="tablewrap"><table class="table table--plain" id="sim">
+      <thead><tr><th></th><th class="r">Every photo reviewed</th><th class="r">With AI triage</th></tr></thead>
+      <tbody>
+        <tr><td>Specialist reviews per year (2 reviewers)</td><td class="r num">{{ '{:,}'.format(s.all) }}</td><td class="r num"><b>{{ '{:,}'.format(s.ai) }}</b></td></tr>
+        <tr><td>Reviewers needed to answer 95% within 48 h</td><td class="r num">{{ s.need_all }}</td><td class="r num"><b>{{ s.need_ai }}</b></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+  {% endif %}
+  {% if not ev %}<div class="emptybox"><b>Evaluation results not found</b><span class="muted">results/eval_ens_d3.json and results/simulation/sim_summary.json are needed.</span></div>{% endif %}
+  <p class="prose__foot">{{ DISCLAIMER }}</p>
+</main>
+{% endblock %}

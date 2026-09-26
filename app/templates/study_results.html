@@ -1,112 +1,32 @@
-{% extends "base.html" %}{% set active = 'study' %}
-{% block title %}Reader Study Statistical Results · DrishtiTrust{% endblock %}
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}S-{{ s.id }} results{% endblock %}
 {% block body %}
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-  <div>
-    <h1>Reader Study Statistical Results: {{ s.reader }}</h1>
-    <p class="muted" style="margin:0;">Empirical human-in-the-loop timing and diagnostic consensus validation for SIH26038.</p>
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(22) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><a href="/study">Reader study</a><span class="crumb">/</span><b>S-{{ s.id }} results</b>
+  <a class="btn btn--secondary btn--sm ml-auto" href="/study-results/{{ s.id }}/csv">Download CSV</a>
+</header>
+<div class="page stack-lg">
+  <div class="rowwrap rowwrap--base"><h1 class="h-page">{{ s.reader }}</h1><span class="muted" id="r-n">{{ out.n }} image{{ 's' if out.n != 1 }} graded · {{ s.created|dmy }}</span></div>
+  {% if out.n %}
+  <div class="kpis kpis--3">
+    <div class="kpi"><span>Time per image</span><div class="rowwrap"><div><span class="small muted">median</span><br><b class="num" id="r-median">{{ out.median_s }} s</b></div><div><span class="small muted">90th percentile</span><br><b class="num">{{ out.p90_s }} s</b></div></div></div>
+    <div class="kpi"><span>Under 30 s</span><b class="num">{{ out.under_30s_pct }}%</b><div class="progress"><div class="progress__bar" style="width:{{ out.under_30s_pct }}%"></div></div></div>
+    <div class="kpi"><span>Agreement with reference grade (quadratic κ)</span><b class="num">{{ out.qwk_vs_reference if out.qwk_vs_reference is defined else '—' }}</b></div>
   </div>
-  <div>
-    <a href="/study" class="btn">← Back to Study Sessions</a>
+  <div class="card rowwrap rowwrap--gap">
+    {% if out.referable_sens is defined %}
+    <div>Referable DR sensitivity<br><b class="big num">{{ out.referable_sens[0] }}</b> <span class="muted">({{ out.referable_sens[1] }}–{{ out.referable_sens[2] }})</span></div>
+    <div>Referable DR specificity<br><b class="big num">{{ out.referable_spec[0] }}</b> <span class="muted">({{ out.referable_spec[1] }}–{{ out.referable_spec[2] }})</span></div>
+    {% endif %}
+    <p class="muted small" style="max-width:420px">Ungradable answers are excluded from κ and from sensitivity/specificity. Intervals are wide at small sample sizes.</p>
   </div>
-</div>
-
-<!-- Primary Study KPIs -->
-<div class="kpis">
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-ink-heading);">{{ out.n }}</div>
-    <div class="l">Cases Evaluated</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:{{ 'var(--dt-recall-ink)' if out.median_s and out.median_s <= 30.0 else 'var(--dt-crimson-primary)' }};">
-      {{ out.median_s or '—' }} s
-    </div>
-    <div class="l">Median Duration / Case (p90: {{ out.p90_s or '—' }} s)</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-orange-vibrant);">
-      {{ out.under_30s_pct or '—' }}%
-    </div>
-    <div class="l">Completed in &lt; 30 Seconds</div>
-  </div>
-  <div class="kpi">
-    <div class="v" style="color:var(--dt-orange-primary);">
-      {{ out.qwk_vs_reference or '—' }}
-    </div>
-    <div class="l">Agreement with Reference (QWK)</div>
-  </div>
-</div>
-
-<!-- Referable DR Diagnostic Accuracy Callout -->
-{% if out.referable_sens %}
-<div class="panel" style="background:var(--dt-surface-raised);">
-  <h2>Diagnostic Accuracy vs Reference Adjudication</h2>
-  <div class="row" style="margin-top:10px;margin-bottom:0;">
-    <div>
-      <span class="small muted">Sensitivity for Referable DR:</span>
-      <div style="font-size:22px;font-weight:700;font-family:var(--dt-font-mono);color:var(--dt-crimson-primary);margin-top:2px;">
-        {{ '%.1f%%' % (100 * out.referable_sens[0]) }}
-      </div>
-      <span class="small muted">95% CI: ({{ '%.1f%%' % (100 * out.referable_sens[1]) }} – {{ '%.1f%%' % (100 * out.referable_sens[2]) }})</span>
-    </div>
-    <div>
-      <span class="small muted">Specificity for Referable DR:</span>
-      <div style="font-size:22px;font-weight:700;font-family:var(--dt-font-mono);color:var(--dt-recall-ink);margin-top:2px;">
-        {{ '%.1f%%' % (100 * out.referable_spec[0]) }}
-      </div>
-      <span class="small muted">95% CI: ({{ '%.1f%%' % (100 * out.referable_spec[1]) }} – {{ '%.1f%%' % (100 * out.referable_spec[2]) }})</span>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-<!-- Individual Case Decision Audit Log -->
-<div class="panel" style="margin-top:16px;">
-  <h2>Individual Case Timing & Decision Breakdown</h2>
-  <div style="overflow-x:auto;">
-    <table class="small">
-      <thead>
-        <tr>
-          <th>Case Image ID</th>
-          <th>Reference Consensus Grade</th>
-          <th>Reader Decision</th>
-          <th>Duration</th>
-          <th>AI Referable Prob.</th>
-          <th>Agreement</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in rows %}
-        {% set reader_grade = 'ungradable' if r.ungradable else r.grade %}
-        {% set agreed = (r.ref_grade == r.grade) and not r.ungradable %}
-        <tr>
-          <td><b style="font-family:var(--dt-font-mono);">{{ r.image_id }}</b></td>
-          <td>Grade {{ r.ref_grade }}</td>
-          <td>
-            <b>{{ 'Ungradable' if r.ungradable else ('Grade ' ~ r.grade) }}</b>
-            {% if r.dme %}<span class="small" style="color:var(--dt-crimson-primary);"> (+DME)</span>{% endif %}
-          </td>
-          <td>
-            <span style="font-family:var(--dt-font-mono);font-weight:700;color:{{ 'var(--dt-crimson-primary)' if (r.ms / 1000) > 30.0 else 'var(--dt-ink-heading)' }};">
-              {{ '%.1f s' % (r.ms / 1000) }}
-            </span>
-          </td>
-          <td style="font-family:var(--dt-font-mono);">
-            {{ '%.2f' % r.ai_p_ref if r.ai_p_ref is not none else '—' }}
-          </td>
-          <td>
-            {% if agreed %}
-            <span class="pill recall" style="font-size:11px;">Exact Match</span>
-            {% elif (r.ref_grade >= 2 and r.grade >= 2) or (r.ref_grade < 2 and r.grade < 2 and not r.ungradable) %}
-            <span class="pill review" style="font-size:11px;">Triage Match</span>
-            {% else %}
-            <span class="pill urgent" style="font-size:11px;">Discrepancy</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <div class="tablewrap"><table class="table table--card" id="answers">
+    <thead><tr><th>Image</th><th class="r">Reference</th><th class="r">Reader</th><th class="r">DME ref / reader</th><th>AI outcome</th><th class="r">AI P(ref)</th><th class="r">Time</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td class="code">{{ r.image_id }}</td><td class="r num">{{ r.ref_grade }}</td>
+      <td class="r num {{ 'disagree' if not r.ungradable and r.grade != r.ref_grade }}">{{ 'U' if r.ungradable else r.grade }}</td><td class="r num">{{ r.ref_dme }} / {{ r.dme }}</td>
+      <td>{{ r.ai_outcome or '—' }}</td><td class="r num">{{ '%.3f'|format(r.ai_p_ref) if r.ai_p_ref is not none else '—' }}</td><td class="r num">{{ '%.1f'|format(r.ms / 1000) }} s</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="emptybox"><b>No answers yet</b><a href="/study/{{ s.id }}/resume">Continue the session</a></div>{% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,17 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo %}
+{% block title %}About{% endblock %}
+{% block bodyclass %}bg-white{% endblock %}
+{% block body %}
+<header class="appbar appbar--wide">
+  <a href="/" class="appbar__home">{{ logo(24) }}<b>DrishtiTrust</b></a><span class="crumb">/</span><span>About</span>
+</header>
+<main class="prose">
+  <h1>About DrishtiTrust</h1>
+  <p>A health worker photographs each eye at a primary health centre. The server checks that the photo is clear, then grades diabetic retinopathy on the ICDR scale and marks lesions it can see.</p>
+  <p>Each eye gets one of four outcomes: re-screen in {{ cfg.recall_months }} months, a remote check by an eye specialist, referral to an eye hospital, or an in-person check when no clear photo could be taken. A random 2% of re-screen results are also checked by a specialist.</p>
+  <p>Built for Smart India Hackathon 2026, problem statement 26038, sponsored by MathWorks.</p>
+  <p><a href="/evidence" class="strong">Validation results and simulated workload →</a></p>
+  <p class="prose__foot">{{ DISCLAIMER }}</p>
+</main>
+{% endblock %}

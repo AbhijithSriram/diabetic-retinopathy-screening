@@ -1,0 +1,642 @@
+{% extends "_base.html" %}
+{% from "_base.html" import logo, info_icon %}
+{% block title %}Screening{% endblock %}
+{% block bodyclass %}hw{% endblock %}
+{% block body %}
+<header class="appbar appbar--wide hide-phone">
+  {{ logo(24) }}<b class="appbar__brand">DrishtiTrust</b><span class="crumb">/</span><span>Screening</span>
+  <span class="appbar__meta"><span data-bind="site-label"></span> · {{ '' }}<span id="today-date"></span> · AI engine: {{ 'MATLAB' if backend == 'matlab' else 'PyTorch' }}</span>
+</header>
+<div class="hw__layout">
+  <!-- Today's list: its own screen on phones, a side column on desktops -->
+  <aside class="hw__aside" aria-label="Today">
+    <div class="hw__aside-head"><b>Today</b><button type="button" class="btn btn--secondary btn--sm" data-act="new-patient">New patient</button></div>
+    <div id="today-aside" class="todaylist todaylist--aside"></div>
+  </aside>
+
+  <main class="hw__main">
+  <div class="phone" id="app">
+
+  <!-- A1 / A2 · today -->
+  <section class="screen" data-screen="today">
+    <div class="phone__bar show-phone">{{ logo(24) }}<b>Today</b><span class="phone__bar-meta"><span data-bind="site-label"></span> · <span data-bind="date-short"></span></span></div>
+    <div class="phone__body">
+      <div id="intro" class="stack-lg" hidden>
+        <h1 class="h-screen">Eye photo check for people with diabetes</h1>
+        <ol class="howto">
+          <li><span>1</span>Enter the patient code from their card. Names are not stored.</li>
+          <li><span>2</span>Take a photo of the right eye, then the left eye.</li>
+          <li><span>3</span>The app tells you what to say to the patient and what to do next.</li>
+        </ol>
+      </div>
+      <div id="today-summary" class="muted"></div>
+      <div id="today-list" class="todaylist"></div>
+    </div>
+    <div class="phone__actions"><button type="button" class="btn btn--primary btn--block" data-act="new-patient" id="btn-start">Start screening</button></div>
+  </section>
+
+  <!-- A3 · new patient -->
+  <section class="screen" data-screen="patient" hidden>
+    <div class="phone__bar"><button type="button" class="iconbtn" data-act="back" aria-label="Back">←</button><b>New patient</b></div>
+    <form class="phone__body stack-lg" id="patient-form" novalidate>
+      <div class="field">
+        <label for="f-patient">Patient code</label>
+        <span class="hint">From the patient's card. Do not enter a name.</span>
+        <input class="input input--lg code" id="f-patient" name="patient" autocomplete="off" autocapitalize="characters" placeholder="P-0000">
+        <span class="error-text" id="f-patient-err" hidden>Enter the patient code to continue.</span>
+      </div>
+      <div class="field">
+        <label for="f-site">Screening site</label>
+        <select class="select input--lg" id="f-site">{% for s in sites %}<option>{{ s }}</option>{% endfor %}</select>
+      </div>
+      <div class="field">
+        <label id="lang-label">Patient's language</label>
+        <span class="hint">Used for what you read aloud and for the slip.</span>
+        <div class="choices choices--3" role="radiogroup" aria-labelledby="lang-label" id="f-lang">
+          <button type="button" class="choice choice--center" role="radio" aria-checked="true" data-lang="en">English</button>
+          <button type="button" class="choice choice--center" role="radio" aria-checked="false" data-lang="hi" lang="hi">हिन्दी</button>
+          <button type="button" class="choice choice--center" role="radio" aria-checked="false" data-lang="ta" lang="ta">தமிழ்</button>
+        </div>
+      </div>
+    </form>
+    <div class="phone__actions"><button type="submit" form="patient-form" class="btn btn--primary btn--block" id="btn-continue">Continue to right eye</button></div>
+  </section>
+
+  <!-- A4 / A5 · capture -->
+  <section class="screen" data-screen="capture" hidden>
+    <div class="phone__bar"><button type="button" class="iconbtn" data-act="back" aria-label="Back">←</button><b class="code" data-bind="patient"></b><span class="phone__bar-meta" data-bind="site-label"></span></div>
+    {% if grading_off %}
+    <div class="strip strip--review" role="status">{{ '' }}<svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,0.5 15.5,8 8,15.5 0.5,8" fill="currentColor"/></svg><div><b>Automatic grading is off.</b> Photos are still checked for quality, then every photo goes to an eye doctor. Tell your supervisor.</div></div>
+    {% endif %}
+    <div class="phone__body stack">
+      <ol class="stepper" id="eye-stepper"></ol>
+      <h1 class="h-screen" data-bind="eye-title"></h1>
+      <div class="capture" id="capture-box">
+        <div class="capture__empty" id="capture-empty"><b>No photo yet</b><span>Ask the patient to look straight at the fixation light. Keep the pupil in the centre.</span></div>
+        <img id="capture-img" alt="" hidden>
+      </div>
+      <div class="rowspread muted" id="capture-meta" hidden><span id="capture-attempt"></span><button type="button" class="linkbtn" data-act="take-again">Take again</button></div>
+    </div>
+    <div class="phone__actions">
+      <div id="capture-actions-empty" class="stack-sm">
+        <button type="button" class="btn btn--primary btn--block" data-act="camera">Take photo</button>
+        <button type="button" class="btn btn--secondary btn--wide" data-act="files">Choose from files</button>
+        {% if samples %}<button type="button" class="linkbtn linkbtn--center" data-act="samples">Use a sample photo (demo)</button>{% endif %}
+      </div>
+      <div id="capture-actions-photo" hidden><button type="button" class="btn btn--primary btn--block" data-act="check" id="btn-check">Check photo</button></div>
+    </div>
+    <input type="file" id="in-camera" accept="image/*" capture="environment" hidden>
+    <input type="file" id="in-files" accept="image/*" hidden>
+  </section>
+
+  <!-- B1 / B2 · checking -->
+  <section class="screen" data-screen="checking" hidden>
+    <div class="phone__bar"><b class="code" data-bind="patient"></b><span class="phone__bar-sub">· <span data-bind="eye-name"></span></span></div>
+    <div class="phone__body stack-lg">
+      <div class="thumbrow"><div class="thumb"><img data-bind-src="photo" alt=""></div><div class="h-screen">Checking photo</div></div>
+      <div id="warmup" hidden class="stack">
+        <div class="progress progress--lg"><div class="progress__bar" id="warm-bar" style="width:0"></div></div>
+        <div class="rowspread muted num"><span><span id="warm-elapsed">0:00</span> so far</span><span>up to 2:00</span></div>
+        <div class="notice notice--info">{{ '' }}<svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><div><b>The system is starting up.</b> The first photo of the day takes up to 2 minutes. After this, each photo takes a few seconds.</div></div>
+        <p class="muted">Keep this screen open. You can talk to the patient while you wait.</p>
+      </div>
+      <div id="checksteps">
+        <ol class="checksteps"><li class="done">{{ '' }}<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/></svg>Photo sent</li><li>{{ '' }}<svg class="spin" width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="#0a5a86" stroke-width="2.5" stroke-dasharray="20 18"/></svg>Checking quality and looking for signs of eye damage</li></ol>
+        <p class="muted">Usually a few seconds.</p>
+      </div>
+    </div>
+    <div class="phone__actions"><button type="button" class="btn btn--neutral btn--wide" data-act="cancel-check">Cancel</button></div>
+  </section>
+
+  <!-- B3 / B4 · retake -->
+  <section class="screen" data-screen="retake" hidden>
+    <div class="phone__bar"><b class="code" data-bind="patient"></b><span class="phone__bar-sub">· <span data-bind="eye-name"></span></span></div>
+    <div class="phone__body stack">
+      <div class="rowspread"><h1 class="h-screen">Take the photo again</h1><span class="attempt-chip" id="retake-attempt"></span></div>
+      <div class="thumbrow thumbrow--top"><div class="thumb thumb--lg"><img data-bind-src="photo" alt="The photo that could not be read"></div><div class="stack-xs"><span class="muted small" id="problems-label">Problem found</span><div id="problems" class="problems"></div></div></div>
+      <div class="todo"><span class="todo__label">What to do</span><div id="instructions"></div></div>
+      <p id="retake-note"></p>
+    </div>
+    <div class="phone__actions"><button type="button" class="btn btn--primary btn--block" data-act="retake" id="btn-retake">Retake</button></div>
+  </section>
+
+  <!-- B5 · C1–C6 · result -->
+  <section class="screen" data-screen="result" hidden>
+    <div class="phone__bar"><button type="button" class="iconbtn" data-act="back" aria-label="Back to today" id="result-back" hidden>←</button><b class="code" data-bind="r-patient"></b><span class="phone__bar-sub">· <span data-bind="r-eye"></span> · <span data-bind="r-time"></span></span></div>
+    <div class="phone__body stack" id="result-body">
+      <div class="decision" id="r-decision" hidden><span class="muted" id="r-decision-when"></span><b id="r-decision-text"></b></div>
+      <div class="banner" id="r-banner"><span id="r-shape"></span><div><div class="banner__title" id="r-title"></div><div class="banner__sub" id="r-sub"></div></div></div>
+      <div class="notice notice--audit" id="r-audit" hidden>{{ '' }}<svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><div><b>Quality check.</b> This photo was picked at random for an eye doctor to look at too. The result above stands; the patient does not need to wait.</div></div>
+      <div class="waitline" id="r-wait" hidden><span class="dot dot--review"></span><span id="r-wait-text"></span></div>
+      <div class="booked-mini card" id="r-booked" hidden></div>
+      <div class="card stack">
+        <div class="rowspread"><b>Tell the patient</b>
+          <div class="seg seg--sm" role="group" aria-label="Language of the message" id="r-lang">
+            <button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="hi" lang="hi" aria-pressed="false">हिं</button><button type="button" data-lang="ta" lang="ta" aria-pressed="false">த</button>
+          </div>
+        </div>
+        <p class="say" id="r-say"></p>
+        <button type="button" class="btn btn--secondary btn--sm align-start" data-act="read-aloud" id="btn-read">Read aloud</button>
+      </div>
+      <ul class="why" id="r-why"></ul>
+      <button type="button" class="detailsbtn" data-act="details" id="btn-details">Details<span aria-hidden="true">+</span></button>
+    </div>
+    <div class="phone__actions stack-xs">
+      <button type="button" class="btn btn--primary btn--block" data-act="result-main" id="btn-result-main"></button>
+      <span class="muted small center" id="result-hint" hidden>The answer will appear in Today's list.</span>
+    </div>
+  </section>
+
+  <!-- C7 · details -->
+  <section class="screen" data-screen="details" hidden>
+    <div class="phone__bar"><button type="button" class="iconbtn" data-act="back" aria-label="Back">←</button><b>Details</b><span class="phone__bar-meta code" id="d-who"></span></div>
+    <div class="phone__body stack">
+      <div class="seg seg--full" role="group" aria-label="Image layer" id="d-layers">
+        <button type="button" data-layer="photo" aria-pressed="true">Photo</button><button type="button" data-layer="lesions" aria-pressed="false">Lesions</button><button type="button" data-layer="gradcam" aria-pressed="false">Heatmap</button>
+      </div>
+      <div class="viewer"><img id="d-img" alt=""></div>
+      <div class="kv card">
+        <span>Most likely</span><b id="d-most"></b>
+        <span>Could be</span><b id="d-set"></b>
+        <span>Chance of referable disease</span><b id="d-pref"></b>
+        <span>Photo quality</span><b id="d-qual"></b>
+      </div>
+      <div class="counts" id="d-counts"></div>
+    </div>
+  </section>
+
+  <!-- D1 · book -->
+  <section class="screen" data-screen="book" hidden>
+    <div class="phone__bar"><button type="button" class="iconbtn" data-act="back" aria-label="Back">←</button><b>Book eye hospital visit</b></div>
+    <div class="phone__body stack-lg">
+      <span class="badge align-start" id="b-badge"></span>
+      <div class="field"><label id="fac-label">Hospital</label>
+        <div class="stack-sm" role="radiogroup" aria-labelledby="fac-label" id="b-facilities">
+          {% for f in facilities %}
+          <button type="button" class="choice choice--radio" role="radio" aria-checked="{{ 'true' if loop.first else 'false' }}" data-facility="{{ f.name }}" data-specialty="{{ f.specialty }}"><span class="radio"></span><span class="stack-0"><b>{{ f.name }}</b><span class="muted small">{{ f.specialty }}</span></span></button>
+          {% endfor %}
+          <button type="button" class="choice choice--radio" role="radio" aria-checked="false" data-facility="" data-specialty=""><span class="radio"></span><b>Another hospital</b></button>
+          <input class="input" id="b-other" placeholder="Hospital name" hidden>
+        </div>
+      </div>
+      <div class="field"><label id="date-label">Date</label>
+        <div class="choices choices--3" role="radiogroup" aria-labelledby="date-label" id="b-dates"></div>
+        <button type="button" class="linkbtn align-start" data-act="other-date">Other date</button>
+        <input type="date" class="input" id="b-date-other" hidden>
+      </div>
+      <div class="field"><label>Help needed</label>
+        <label class="choice choice--check"><input type="checkbox" id="b-transit"><span>Transport to hospital</span></label>
+        <label class="choice choice--check"><input type="checkbox" id="b-escort"><span>Someone to go with the patient</span></label>
+      </div>
+    </div>
+    <div class="phone__actions"><button type="button" class="btn btn--primary btn--block" data-act="book" id="btn-book">Book visit</button></div>
+  </section>
+
+  <!-- D2 · booked -->
+  <section class="screen" data-screen="booked" hidden>
+    <div class="phone__bar"><b class="code" data-bind="r-patient"></b><span class="phone__bar-sub">· <span data-bind="r-eye"></span></span></div>
+    <div class="phone__body stack">
+      <h1 class="h-screen">Visit booked</h1>
+      <div class="kv card"><span>Where</span><b id="k-where"></b><span>When</span><b id="k-when"></b><span>Help</span><b id="k-help"></b></div>
+      <div class="card stack-xs"><b>Patient's own link</b><span class="muted">Shows the result and appointment in their language. No login.</span><a class="code breakall" id="k-link" target="_blank" rel="noopener"></a></div>
+      <p class="muted">The referral coordinator will send reminders and follow up if the visit is missed.</p>
+    </div>
+    <div class="phone__actions stack-sm">
+      <a class="btn btn--primary btn--block" id="btn-slip" target="_blank" rel="noopener">Print slip</a>
+      <button type="button" class="btn btn--secondary btn--wide" data-act="after-booking" id="btn-after-booking"></button>
+    </div>
+  </section>
+
+  <!-- E2 / E3 · error -->
+  <section class="screen" data-screen="error" hidden>
+    <div class="phone__bar"><b class="code" data-bind="patient"></b><span class="phone__bar-sub">· <span data-bind="eye-name"></span></span></div>
+    <div class="phone__body stack">
+      <div class="alert"><svg width="24" height="24" viewBox="0 0 16 16" aria-hidden="true"><polygon points="8,1 15.5,15 0.5,15" fill="currentColor"/></svg><div><div class="alert__title" id="e-title"></div><div id="e-body"></div></div></div>
+      <div class="todo"><b>Do not tell the patient a result.</b> <span id="e-todo"></span></div>
+      <div class="thumbrow muted"><div class="thumb"><img data-bind-src="photo" alt=""></div>Photo kept on this screen. It will not be lost while this page is open.</div>
+      <div class="code small muted" id="e-ref"></div>
+    </div>
+    <div class="phone__actions"><button type="button" class="btn btn--primary btn--block" data-act="check">Try again</button></div>
+  </section>
+
+  <div class="phone__disclaimer" id="disclaimer">{{ info_icon() }}<div><span>{{ DISCLAIMER }}</span><span id="disclaimer-2" class="block"></span></div></div>
+  </div>
+  </main>
+</div>
+
+<!-- sample photos (demo) -->
+<div class="sheet" id="sample-sheet" hidden>
+  <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="rowspread"><b id="sheet-title">Sample photos</b><button type="button" class="iconbtn" data-act="close-sheet" aria-label="Close">✕</button></div>
+    <p class="muted small">Public-dataset photographs for demonstrations. The label is the dataset's own grade.</p>
+    <div class="stack-sm">
+      {% for s in samples %}<button type="button" class="choice" data-sample="{{ s.file }}"><img src="/samples/{{ s.file }}" alt="" class="choice__img" loading="lazy"><span>{{ s.label }}</span></button>{% endfor %}
+      {% if samples %}<button type="button" class="choice" data-sample="{{ samples[0].file }}" data-simulate="blur"><span class="choice__img choice__img--blur" style="background-image:url(/samples/{{ samples[0].file }})"></span><span>Out-of-focus photo (simulated, to try the retake steps)</span></button>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CFG = {{ cfg|tojson }};
+const QCFG = {{ qcfg|tojson }};
+const OPEN_CASE = {{ open_case|tojson }};
+const PROBLEMS = { off_centre: 'Retina cut off', too_dark: 'Too dark', too_bright: 'Too bright', uneven: 'Uneven light', blurry: 'Blurry', ungradable: 'Not clear enough to read', no_retina: 'No retina found' };
+const DISCLAIMER2 = { hi: 'शोध प्रोटोटाइप। यह मेडिकल उपकरण नहीं है। अंतिम निर्णय डॉक्टर लेंगे।', ta: 'ஆராய்ச்சி முன்மாதிரி. மருத்துவ சாதனம் அல்ல. இறுதி முடிவு மருத்துவருடையது.' };
+const EYES = { right: 'Right eye', left: 'Left eye' };
+
+const S = {                               // the patient being screened
+  patient: '', site: '', lang: 'en', eye: 'right', attempt: 1,
+  file: null, sample: null, simulate: '', photoUrl: '',
+  current: null,                         // payload of the case on the result screen
+  msgLang: 'en', stack: [], abort: null, layer: 'photo', done: {},
+};
+let seenDecisions = new Set();
+const $ = sel => document.querySelector(sel);
+const $$ = sel => [...document.querySelectorAll(sel)];
+
+try { S.site = localStorage.getItem('dt.site') || ''; } catch (e) { /* storage unavailable */ }
+if (!S.site) S.site = $('#f-site').value;
+
+function bind() {
+  $$('[data-bind="site-label"]').forEach(e => e.textContent = S.site);
+  $$('[data-bind="patient"]').forEach(e => e.textContent = S.patient);
+  $$('[data-bind="eye-title"]').forEach(e => e.textContent = EYES[S.eye]);
+  $$('[data-bind="eye-name"]').forEach(e => e.textContent = EYES[S.eye]);
+  $$('[data-bind-src="photo"]').forEach(e => { if (S.photoUrl) e.src = S.photoUrl; });
+  $$('[data-bind="date-short"]').forEach(e => e.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }));
+  $('#today-date').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function show(name, push = true) {
+  const cur = $$('.screen').find(s => !s.hidden);
+  if (push && cur && cur.dataset.screen !== name) S.stack.push(cur.dataset.screen);
+  $$('.screen').forEach(s => s.hidden = s.dataset.screen !== name);
+  document.body.dataset.view = name;
+  const d2 = (name === 'result' && S.msgLang !== 'en') ? DISCLAIMER2[S.msgLang] : '';
+  $('#disclaimer-2').textContent = d2 || '';
+  $('#disclaimer-2').lang = S.msgLang;
+  window.scrollTo(0, 0);
+  bind();
+}
+function back() {
+  const prev = S.stack.pop();
+  if (prev === 'checking' || prev === 'error') return show('capture', false);
+  show(prev || 'today', false);
+}
+
+// ------------------------------------------------------------------ today
+async function loadToday() {
+  let data;
+  try { data = await DT.json('/api/today'); } catch (e) { return; }
+  const html = data.patients.map(p => `
+    <div class="patientcard">
+      <div class="patientcard__head"><b class="code">${DT.esc(p.patient)}</b><span class="muted small">${DT.hm(p.first)}</span></div>
+      ${p.eyes.map(c => `<button type="button" class="eyerow" data-case="${c.id}"><span>${EYES[c.eye] || DT.esc(c.eye)}</span>${outcomeLine(c)}</button>`).join('')}
+      ${p.eyes.length === 1 ? `<div class="eyerow eyerow--none"><span>${c1other(p.eyes[0].eye)}</span><span class="muted">not screened yet</span></div>` : ''}
+    </div>`).join('');
+  const empty = `<div class="emptybox"><b>No patients screened today</b><span class="muted">Screened patients appear here.</span></div>`;
+  $('#today-list').innerHTML = data.patients.length ? html : empty;
+  $('#today-aside').innerHTML = data.patients.length ? html : empty;
+  $('#today-summary').textContent = data.patients.length ? `${data.patients.length} patient${data.patients.length > 1 ? 's' : ''} · ${data.eyes} eye${data.eyes > 1 ? 's' : ''}` : '';
+  $('#intro').hidden = data.patients.length > 0;
+  $('#btn-start').textContent = data.patients.length ? 'New patient' : 'Start screening';
+  $$('[data-case]').forEach(b => b.onclick = () => openCase(+b.dataset.case));
+  // a specialist's decision arriving while the app is open
+  data.patients.forEach(p => p.eyes.forEach(c => {
+    if (c.review && !seenDecisions.has(c.id)) {
+      if (window._todayLoaded) {
+        DT.toast(`The eye doctor's answer for ${c.patient || 'case ' + c.id} (${(EYES[c.eye] || '').toLowerCase()}) has arrived.`,
+                 { label: 'Open', run: () => openCase(c.id) });
+        if (S.current && S.current.id === c.id) refreshCurrent();
+      }
+      seenDecisions.add(c.id);
+    }
+  }));
+  window._todayLoaded = true;
+}
+function c1other(eye) { return eye === 'right' ? 'Left eye' : 'Right eye'; }
+function outcomeLine(c) {
+  const v = c.view, kind = v.kind;
+  let text = v.short;
+  if (c.referral && c.referral.appointment) text = `${kind === 'ungradable' ? 'See in person' : kind === 'urgent' ? 'Urgent refer' : 'Refer'} · booked ${DT.day(c.referral.appointment).replace(/ \d{4}$/, '')}`;
+  return `<span class="outcome outcome--${kind}">${kind === 'recapture' ? '' : DT.shape(kind, 13)}${DT.esc(text)}</span>`;
+}
+
+// ------------------------------------------------------------------ patient
+function newPatient() {
+  S.patient = ''; S.eye = 'right'; S.attempt = 1; S.done = {}; resetPhoto();
+  $('#f-patient').value = ''; $('#f-patient-err').hidden = true; $('#f-patient').classList.remove('input--error');
+  $('#f-site').value = S.site;
+  setLang(S.lang || 'en');
+  S.stack = [];
+  show('patient');
+  setTimeout(() => $('#f-patient').focus(), 50);
+}
+function setLang(l) {
+  S.lang = l;
+  $$('#f-lang .choice').forEach(b => b.setAttribute('aria-checked', String(b.dataset.lang === l)));
+}
+$('#patient-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const code = $('#f-patient').value.trim().toUpperCase();
+  if (!code) { $('#f-patient-err').hidden = false; $('#f-patient').classList.add('input--error'); $('#f-patient').focus(); return; }
+  S.patient = code; S.site = $('#f-site').value;
+  try { localStorage.setItem('dt.site', S.site); } catch (err) { /* storage unavailable */ }
+  S.eye = 'right'; S.attempt = 1; S.msgLang = S.lang; resetPhoto();
+  showCapture();
+});
+
+// ------------------------------------------------------------------ capture
+function stepper() {
+  const r = S.done.right, l = S.eye === 'left';
+  $('#eye-stepper').innerHTML =
+    `<li class="${r || l ? 'done' : ''}" ${S.eye === 'right' ? 'aria-current="step"' : ''}>1 · Right eye${r ? ' · done' : ''}</li>` +
+    `<li class="${S.done.left ? 'done' : ''}" ${l ? 'aria-current="step"' : ''}>2 · Left eye${S.done.left ? ' · done' : ''}</li>`;
+}
+function resetPhoto() { S.file = null; S.sample = null; S.simulate = ''; S.photoUrl = ''; }
+function showCapture() {
+  stepper();
+  const has = !!S.photoUrl;
+  $('#capture-img').hidden = !has; $('#capture-empty').hidden = has;
+  if (has) { $('#capture-img').src = S.photoUrl; $('#capture-img').alt = `Captured photo of the ${EYES[S.eye].toLowerCase()}`; }
+  $('#capture-meta').hidden = !has;
+  $('#capture-attempt').textContent = `Attempt ${S.attempt} of ${QCFG.max_attempts}`;
+  $('#capture-actions-empty').hidden = has; $('#capture-actions-photo').hidden = !has;
+  show('capture');
+}
+function takePhoto(file) {
+  resetPhoto(); S.file = file; S.photoUrl = URL.createObjectURL(file); showCapture();
+}
+['#in-camera', '#in-files'].forEach(id => $(id).addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) takePhoto(f); }));
+$$('[data-sample]').forEach(b => b.onclick = () => {
+  resetPhoto(); S.sample = b.dataset.sample; S.simulate = b.dataset.simulate || '';
+  S.photoUrl = `/samples/${encodeURIComponent(S.sample)}`;
+  $('#sample-sheet').hidden = true; showCapture();
+});
+
+// ------------------------------------------------------------------ check
+let warmTimer = null;
+async function check() {
+  if (!S.photoUrl) return;
+  show('checking');
+  const t0 = Date.now();
+  let status = { ready: true };
+  try { status = await DT.json('/api/status'); } catch (e) { /* the check itself reports errors */ }
+  const warm = () => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    $('#warm-elapsed').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    $('#warm-bar').style.width = Math.min(100, s / 120 * 100) + '%';
+    if (!status.ready || s >= 8) { $('#warmup').hidden = false; $('#checksteps').hidden = true; }
+  };
+  $('#warmup').hidden = true; $('#checksteps').hidden = false;
+  warm(); clearInterval(warmTimer); warmTimer = setInterval(warm, 1000);
+  const fd = new FormData();
+  if (S.file) fd.append('file', S.file); else fd.append('sample', S.sample);
+  if (S.simulate) fd.append('simulate', S.simulate);
+  fd.append('site', S.site); fd.append('patient', S.patient); fd.append('eye', S.eye);
+  fd.append('attempt', S.attempt); fd.append('lang', S.lang);
+  S.abort = new AbortController();
+  let r;
+  try {
+    r = await fetch('/api/screen', { method: 'POST', body: fd, signal: S.abort.signal });
+  } catch (e) {
+    clearInterval(warmTimer);
+    if (e.name === 'AbortError') return showCapture();
+    return showError('network');
+  }
+  clearInterval(warmTimer);
+  if (!r.ok) {
+    let detail = ''; try { detail = (await r.json()).detail; } catch (e) { /* not JSON */ }
+    return showError(r.status === 400 ? 'badfile' : 'server', r.status, detail);
+  }
+  const data = await r.json();
+  const c = data.case;
+  if (c.outcome === 'recapture') return showRetake(c);
+  S.done[S.eye] = true;
+  S.current = c; S.msgLang = S.lang;
+  loadToday();
+  showResult(c, true);
+}
+function showError(kind, code, detail) {
+  const T = {
+    network: ['No result received', 'The phone could not reach the server. Nothing has been decided for this eye.', 'Try again when the signal is back.'],
+    server: ['The check did not finish', 'The server had a problem. Nothing has been decided for this eye.', 'Try once more. If it fails again, call your supervisor.'],
+    badfile: ['This file is not a photo', 'The server could not open it as an image. Nothing has been decided for this eye.', 'Take the photo again, or choose a different file.'],
+  }[kind];
+  $('#e-title').textContent = T[0]; $('#e-body').textContent = T[1]; $('#e-todo').textContent = T[2];
+  $('#e-ref').textContent = code ? `Error ${code} · ${DT.hm(Date.now() / 1000)}${detail ? ' · ' + detail : ''}` : '';
+  show('error');
+}
+function showRetake(c) {
+  const q = c.quality || {};
+  const probs = q.problems || [];
+  const last = S.attempt + 1 >= QCFG.max_attempts;
+  $('#retake-attempt').textContent = `${S.attempt} of ${QCFG.max_attempts}`;
+  $('#retake-attempt').classList.toggle('attempt-chip--solid', S.attempt >= 2);
+  $('#problems-label').textContent = probs.length > 1 ? 'Problems found' : 'Problem found';
+  $('#problems').innerHTML = probs.map(p => `<b>${DT.esc(PROBLEMS[p] || p)}</b>`).join('');
+  const ins = q.instructions || [];
+  $('#instructions').innerHTML = ins.length > 1 ? ins.map((t, i) => `<p class="todo__item"><b>${i + 1}.</b>${DT.esc(t)}</p>`).join('') : `<p class="todo__text">${DT.esc(ins[0] || '')}</p>`;
+  const left = QCFG.max_attempts - S.attempt;
+  $('#retake-note').className = last ? 'strong' : 'muted';
+  $('#retake-note').textContent = last ? 'Last try. If this photo also fails, the patient needs an in-person eye check.'
+    : `${left} tries left. If the photo still cannot be read after ${QCFG.max_attempts} tries, the patient will need an in-person eye check.`;
+  $('#btn-retake').textContent = `Retake ${EYES[S.eye].toLowerCase()}${last ? ' (last try)' : ''}`;
+  S.attempt += 1;
+  show('retake');
+}
+
+// ------------------------------------------------------------------ result
+function showResult(c, fresh) {
+  S.current = c; S.fresh = fresh;
+  const v = c.view, kind = v.kind;
+  $$('[data-bind="r-patient"]').forEach(e => e.textContent = c.patient || `Case ${c.id}`);
+  $$('[data-bind="r-eye"]').forEach(e => e.textContent = EYES[c.eye] || c.eye);
+  $$('[data-bind="r-time"]').forEach(e => e.textContent = DT.hm(c.created));
+  $('#result-back').hidden = fresh;
+  const banner = $('#r-banner');
+  banner.className = `banner banner--${kind === 'urgent' ? 'urgent' : kind}`;
+  banner.dataset.kind = kind;
+  $('#r-shape').innerHTML = DT.shape(kind, 28);
+  $('#r-title').textContent = v.title; $('#r-sub').textContent = v.sub;
+  $('#r-audit').hidden = !(c.audit && kind === 'recall' && !c.review);
+  // specialist decision (C4)
+  if (c.review) {
+    const g = c.review.ungradable ? 'Photo could not be graded' : `${ {{ ICDR|tojson }}[c.review.grade] } · ${c.review.dme ? 'possible macular oedema' : 'no macular oedema'}`;
+    $('#r-decision').hidden = false;
+    $('#r-decision-when').textContent = `Eye doctor's decision · ${DT.hm(c.review.created)}`;
+    $('#r-decision-text').textContent = g;
+  } else $('#r-decision').hidden = true;
+  // waiting for the specialist (C3)
+  $('#r-wait').hidden = !(c.outcome === 'review' && !c.review);
+  if (!$('#r-wait').hidden) {
+    const pos = c.queue_position ? `${ordinal(c.queue_position)} in line` : 'in the queue';
+    $('#r-wait-text').textContent = `Waiting · ${pos} · checked ${DT.hm(Date.now() / 1000)}`;
+  }
+  // booked already
+  const ref = c.referral;
+  $('#r-booked').hidden = !(ref && ref.appointment);
+  if (ref && ref.appointment) $('#r-booked').innerHTML = `<span class="muted small">Visit booked</span><b>${DT.esc(ref.facility || '')}</b><span>${DT.day(ref.appointment)}</span><a href="/slip/${c.token}" target="_blank" rel="noopener">Print slip</a>`;
+  setMessage(c.message);
+  $('#r-why').innerHTML = (c.message.why || []).map(w => `<li>${DT.esc(w)}</li>`).join('');
+  $('#r-why').lang = S.msgLang;
+  $('#btn-details').hidden = !c.grade;
+  // main action
+  const main = $('#btn-result-main');
+  main.classList.toggle('btn--danger', kind === 'urgent');
+  main.classList.toggle('btn--primary', kind !== 'urgent');
+  $('#result-hint').hidden = !(c.outcome === 'review' && !c.review);
+  if (v.books && !(ref && ref.appointment)) { main.textContent = kind === 'urgent' ? 'Book urgent visit' : 'Choose hospital and date'; main.dataset.go = 'book'; }
+  else if (!fresh) { main.textContent = 'Back to today'; main.dataset.go = 'today'; }
+  else if (c.eye === 'right' && !S.done.left) { main.textContent = 'Next: left eye'; main.dataset.go = 'left'; }
+  else { main.textContent = 'Finish patient'; main.dataset.go = 'finish'; }
+  show('result');
+  voiceCheck();
+}
+function ordinal(n) { return n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th'); }
+function setMessage(m) {
+  $('#r-say').textContent = m.main; $('#r-say').lang = m.lang || S.msgLang;
+  $$('#r-lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === S.msgLang)));
+}
+async function switchMsgLang(l) {
+  S.msgLang = l;
+  try { const c = await DT.json(`/api/case/${S.current.id}?lang=${l}`); S.current.message = c.message; setMessage(c.message);
+        $('#r-why').innerHTML = (c.message.why || []).map(w => `<li>${DT.esc(w)}</li>`).join(''); $('#r-why').lang = l; } catch (e) { /* keep text */ }
+  $('#disclaimer-2').textContent = l !== 'en' ? DISCLAIMER2[l] : ''; $('#disclaimer-2').lang = l;
+  voiceCheck();
+}
+function voiceCheck() {
+  const ok = 'speechSynthesis' in window && (S.msgLang === 'en' || DT.voiceFor(S.msgLang));
+  $('#btn-read').hidden = !ok;
+}
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = voiceCheck;
+async function refreshCurrent() {
+  try { const c = await DT.json(`/api/case/${S.current.id}?lang=${S.msgLang}&full=1`); showResult(c, S.fresh); } catch (e) { /* ignore */ }
+}
+async function openCase(id) {
+  try {
+    const c = await DT.json(`/api/case/${id}?full=1`);
+    S.msgLang = c.lang || 'en'; S.patient = c.patient; S.eye = c.eye; S.stack = [];
+    showResult(c, false);
+    S.stack = ['today'];
+  } catch (e) { DT.toast('Could not open that case.'); }
+}
+function resultMain() {
+  const go = $('#btn-result-main').dataset.go;
+  if (go === 'book') return showBook();
+  afterEye(go);
+}
+function afterEye(go) {
+  if (go === 'left') { S.eye = 'left'; S.attempt = 1; resetPhoto(); S.stack = []; return showCapture(); }
+  S.stack = []; S.current = null; loadToday(); show('today', false);
+}
+
+// ------------------------------------------------------------------ details
+function showDetails() {
+  const c = S.current; if (!c || !c.grade) return;
+  $('#d-who').textContent = `${c.patient || c.id} · ${c.eye === 'right' ? 'R' : 'L'}`;
+  $('#d-most').textContent = c.grade.most_likely;
+  $('#d-set').textContent = (c.grade_set || []).join(' to ') || '—';
+  $('#d-pref').textContent = Math.round(c.grade.p_referable * 100) + '%';
+  const g = c.quality && c.quality.gradability;
+  $('#d-qual').textContent = (g === null || g === undefined) ? 'passed (rules)' : `${g.toFixed(2)} · passed`;
+  const n = (c.rules || {}).counts || {};
+  $('#d-counts').innerHTML = ['MA', 'HE', 'EX', 'SE'].map(k => `<div><b>${n[k] ?? '–'}</b><span>${k}</span></div>`).join('');
+  setLayer('photo');
+  show('details');
+}
+function setLayer(l) {
+  const imgs = S.current.images || {};
+  S.layer = l;
+  $$('#d-layers button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.layer === l)));
+  $('#d-img').src = imgs[l] || imgs.photo || '';
+  $('#d-img').alt = { photo: 'Photo', lesions: 'Lesion overlay: MA red, HE dark red, EX yellow, SE white; disc green; fovea cyan', gradcam: 'Grad-CAM heatmap' }[l];
+}
+
+// ------------------------------------------------------------------ booking
+function showBook() {
+  const c = S.current, v = c.view;
+  const due = new Date(c.created * 1000); due.setDate(due.getDate() + v.days);
+  const b = $('#b-badge');
+  b.className = `badge align-start badge--${v.kind === 'urgent' ? 'urgent' : v.kind}`;
+  b.innerHTML = `<span class="badge__shape"></span>${v.kind === 'ungradable' ? 'In-person check' : v.kind === 'urgent' ? 'Urgent refer' : 'Refer'} · by ${due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  // three suggested dates inside the deadline, then any date
+  const offs = v.kind === 'urgent' ? [2, 5, 9] : [7, 9, 14];
+  $('#b-dates').innerHTML = offs.filter(o => o <= v.days).map((o, i) => {
+    const iso = DT.isoDay(o);
+    return `<button type="button" class="choice choice--center choice--date" role="radio" aria-checked="${i === 1}" data-date="${iso}"><b>${DT.day(iso).replace(/ \d{4}$/, '')}</b></button>`;
+  }).join('');
+  $$('#b-dates .choice').forEach(x => x.onclick = () => pick('#b-dates', x, () => { $('#b-date-other').hidden = true; }));
+  $('#b-date-other').max = DT.isoDay(v.days); $('#b-date-other').min = DT.isoDay(0); $('#b-date-other').hidden = true;
+  $('#btn-book').className = `btn btn--block ${v.kind === 'urgent' ? 'btn--danger' : 'btn--primary'}`;
+  $('#btn-book').textContent = v.kind === 'urgent' ? 'Book urgent visit' : 'Book visit';
+  show('book');
+}
+function pick(group, el, then) {
+  $$(group + ' .choice').forEach(x => x.setAttribute('aria-checked', String(x === el)));
+  if (then) then();
+}
+$$('#b-facilities .choice').forEach(x => x.onclick = () => pick('#b-facilities', x, () => { $('#b-other').hidden = !!x.dataset.facility; }));
+async function book() {
+  const c = S.current;
+  const fac = $('#b-facilities [aria-checked="true"]');
+  const name = fac.dataset.facility || $('#b-other').value.trim();
+  if (!name) { $('#b-other').hidden = false; $('#b-other').focus(); return DT.toast('Enter the hospital name.'); }
+  const dateBtn = $('#b-dates [aria-checked="true"]');
+  const date = !$('#b-date-other').hidden && $('#b-date-other').value ? $('#b-date-other').value : dateBtn && dateBtn.dataset.date;
+  if (!date) return DT.toast('Choose a date.');
+  $('#btn-book').disabled = true;
+  try {
+    const r = await DT.post('/api/referral/book', { case_id: c.id, facility: name, specialty: fac.dataset.specialty || '',
+      appointment_date: date, transit: $('#b-transit').checked, escort: $('#b-escort').checked, notes: `Booked by health worker at ${S.site}` });
+    const help = [$('#b-transit').checked && 'Transport requested', $('#b-escort').checked && 'Escort advised'].filter(Boolean).join(' · ') || 'None';
+    $('#k-where').innerHTML = `${DT.esc(name)}${fac.dataset.specialty ? `<br><span class="normal small">${DT.esc(fac.dataset.specialty)}</span>` : ''}`;
+    $('#k-when').textContent = DT.day(date);
+    $('#k-help').textContent = help;
+    const link = location.origin + r.status_url;
+    $('#k-link').textContent = link; $('#k-link').href = r.status_url;
+    $('#btn-slip').href = r.slip_url;
+    const left = S.fresh && c.eye === 'right' && !S.done.left;
+    $('#btn-after-booking').textContent = left ? 'Next: left eye' : S.fresh ? 'Finish patient' : 'Back to today';
+    $('#btn-after-booking').dataset.go = left ? 'left' : 'finish';
+    loadToday();
+    show('booked');
+  } catch (e) { DT.toast('Could not book the visit. Try again.'); }
+  finally { $('#btn-book').disabled = false; }
+}
+
+// ------------------------------------------------------------------ wiring
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  const act = a.dataset.act;
+  if (act === 'new-patient') newPatient();
+  else if (act === 'back') back();
+  else if (act === 'camera') $('#in-camera').click();
+  else if (act === 'files') $('#in-files').click();
+  else if (act === 'samples') $('#sample-sheet').hidden = false;
+  else if (act === 'close-sheet') $('#sample-sheet').hidden = true;
+  else if (act === 'take-again') { resetPhoto(); showCapture(); }
+  else if (act === 'check') check();
+  else if (act === 'cancel-check') { if (S.abort) S.abort.abort(); }
+  else if (act === 'retake') { resetPhoto(); showCapture(); }
+  else if (act === 'read-aloud') DT.speak($('#r-say').textContent, S.msgLang);
+  else if (act === 'details') showDetails();
+  else if (act === 'result-main') resultMain();
+  else if (act === 'other-date') { $('#b-date-other').hidden = false; $$('#b-dates .choice').forEach(x => x.setAttribute('aria-checked', 'false')); $('#b-date-other').focus(); }
+  else if (act === 'book') book();
+  else if (act === 'after-booking') afterEye(a.dataset.go);
+});
+$$('#f-lang .choice').forEach(b => b.onclick = () => setLang(b.dataset.lang));
+$$('#r-lang button').forEach(b => b.onclick = () => switchMsgLang(b.dataset.lang));
+$$('#d-layers button').forEach(b => b.onclick = () => setLayer(b.dataset.layer));
+$('#sample-sheet').addEventListener('click', e => { if (e.target.id === 'sample-sheet') e.target.hidden = true; });
+
+document.body.dataset.view = 'today';
+bind();
+loadToday().then(() => { if (OPEN_CASE) openCase(OPEN_CASE); });
+setInterval(loadToday, 10000);   // decisions arrive in Today's list and as a toast
+setInterval(() => { if (S.current && !$('[data-screen="result"]').hidden && S.current.outcome === 'review' && !S.current.review) refreshCurrent(); }, 5000);
+</script>
+{% endblock %}
