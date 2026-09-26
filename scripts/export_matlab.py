@@ -31,7 +31,10 @@ Checks, all of which must pass or the export fails:
      is not on the list MATLAB converts to built-in layers.
 
 Output: runs/onnx_matlab/ (grader_<run>.onnx, lesions.onnx, landmarks.onnx,
-manifest.json).
+quality.onnx, manifest.json).
+
+`--only-quality` adds the learned gradability model to an existing export
+without re-exporting the rest (which needs the valA crops for its checks).
 """
 from __future__ import annotations
 
@@ -151,16 +154,26 @@ def corn_probs_np(logits: np.ndarray) -> np.ndarray:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--graders", required=True, help="comma-separated run names (ensemble members)")
+    ap.add_argument("--graders", default="", help="comma-separated run names (ensemble members)")
     ap.add_argument("--ens", default="", help="ensemble run holding policy.json and preds.csv, for the end-to-end check")
     ap.add_argument("--seg", default="seg_r34")
     ap.add_argument("--lmk", default="lmk_r18")
+    ap.add_argument("--qual", default="qual_b0")
+    ap.add_argument("--only-quality", action="store_true", help="add quality.onnx to an existing export")
     ap.add_argument("--out", default=str(RUNS / "onnx_matlab"))
     ap.add_argument("--n-check", type=int, default=24, help="valA images for the end-to-end check")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(8)
+    if a.only_quality:
+        manifest = json.loads((out / "manifest.json").read_text())
+        export_quality(a, out, manifest)
+        (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
+        print("updated", out / "manifest.json")
+        return
+    if not a.graders:
+        ap.error("--graders is required unless --only-quality")
 
     from drishti.explain.gradcam import load_grader
     man = pd.read_csv(PROCESSED / "manifest.csv", low_memory=False)
@@ -262,8 +275,58 @@ def main():
         print(f"{path.name}: parity {manifest['parity'][path.name]:.2e}, "
               f"not built-in: {manifest['audit'][path.name]['not_builtin']}", flush=True)
 
+    export_quality(a, out, manifest)
+
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print("wrote", out)
+
+
+def export_quality(a, out: Path, manifest: dict):
+    """The learned gradability model: EfficientNet-B0 on the raw (not
+    Graham-normalised) 512 crop resized to 384, ImageNet-normalised, one
+    sigmoid output. Reference scores on app/samples let check_export compare."""
+    qp = RUNS / a.qual / "best.pt"
+    if not qp.exists():
+        return
+    import cv2
+    from drishti.preprocess import prepare
+    from drishti.quality.gate import load_cfg
+    from drishti.quality.train import SIZE, build
+    m = build(pretrained=False)
+    m.load_state_dict(torch.load(qp, map_location="cpu", weights_only=False)["state"])
+    w = matlab_friendly(SigmoidWrap(m)).eval()
+    path = out / "quality.onnx"
+    export(w, SIZE, path, ["gradability"], 17)
+    # the samples are all clearly gradable (score ~1.0), so degraded copies are
+    # written next to the model to exercise the range MATLAB must reproduce
+    samples = Path(__file__).resolve().parent.parent / "app" / "samples"
+    qdir = out / "quality_checks"
+    qdir.mkdir(exist_ok=True)
+    files = []
+    for f in sorted(samples.glob("*.jpg")):
+        files.append(f)
+        img = read_rgb(f)
+        variants = {"dark": (img * 0.18).astype(np.uint8),
+                    "blur": cv2.GaussianBlur(img, (0, 0), img.shape[1] / 120),
+                    "washed": np.clip(img * 0.5 + 150, 0, 255).astype(np.uint8)}
+        for k, v in variants.items():
+            p = qdir / f"{f.stem}_{k}.png"
+            cv2.imwrite(str(p), cv2.cvtColor(v, cv2.COLOR_RGB2BGR))
+            files.append(p)
+    xs, refs = [], []
+    for f in files:
+        crop = prepare(read_rgb(f), 512).image
+        x = to_tensor(cv2.resize(crop, (SIZE, SIZE), interpolation=cv2.INTER_AREA))[None]
+        xs.append(x)
+        with torch.no_grad():
+            refs.append({"file": f.relative_to(out).as_posix() if f.is_relative_to(out) else f.name,
+                         "gradability": round(float(w(x)[0, 0]), 5)})
+    manifest["parity"][path.name] = parity(w, ort_session(path), xs)
+    manifest["audit"][path.name] = op_audit(path)
+    manifest["quality"] = {"file": path.name, "run": a.qual, "size": SIZE, "input": "raw 512 crop, INTER_AREA resize, ImageNet normalisation",
+                           "threshold": load_cfg()["gradability_threshold"], "reference": refs}
+    print(f"{path.name}: parity {manifest['parity'][path.name]:.2e}, "
+          f"not built-in: {manifest['audit'][path.name]['not_builtin']}", flush=True)
 
 
 if __name__ == "__main__":

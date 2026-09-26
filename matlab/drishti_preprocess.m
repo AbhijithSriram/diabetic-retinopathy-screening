@@ -15,7 +15,7 @@ if nargin < 3, normalise = false; end
 rgb = im2uint8(rgb);
 [h, w, ~] = size(rgb);
 f = 512 / max(h, w);
-small = imresize(rgb, f, 'bilinear');
+small = resize_area(rgb, max(1, round(h * f)), max(1, round(w * f)));  % cv2.INTER_AREA, as preprocess.py fov_mask
 bright = double(max(small, [], 3));
 thr = max(12, 0.08 * prctile(bright(:), 99));
 m = bright > thr;
@@ -23,7 +23,12 @@ m = imopen(m, strel('square', 5));
 m = bwareafilt(m, 1);
 m = imfill(m, 'holes');
 m = imclose(m, strel('square', 9));
-mask = imresize(m, [h w], 'nearest');
+% cv2.INTER_NEAREST takes source index floor(dst * src/dst) with no
+% half-pixel offset; imresize 'nearest' samples pixel centres, which shifts
+% the mask edge, and so the crop, by a pixel
+ri = min(size(m, 1), floor((0:h - 1) * size(m, 1) / h) + 1);
+ci = min(size(m, 2), floor((0:w - 1) * size(m, 2) / w) + 1);
+mask = m(ri, ci);
 
 [ys, xs] = find(mask);
 side = max(max(xs) - min(xs) + 1, max(ys) - min(ys) + 1);

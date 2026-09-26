@@ -5,12 +5,13 @@ function r = rule_engine(lesions, od, fovea, lesionSize)
 %   lesionSize frame). od: [x y radius] or []. fovea: [x y] or [] (image centre).
 
 c = lesionSize / 2;
-if isempty(fovea), fovea = [c c]; end
+fsrc = 'detected';
+if isempty(fovea), fovea = [c c]; fsrc = 'assumed at image centre'; end
 fx = fovea(1); fy = fovea(2);
 if ~isempty(od) && 2 * od(3) >= lesionSize / 12 && 2 * od(3) <= lesionSize / 4
-    dd = 2 * od(3); nasal = sign(od(1) - fx);
+    dd = 2 * od(3); nasal = sign(od(1) - fx); ddsrc = 'measured';
 else
-    dd = lesionSize / 7.5; nasal = 1;
+    dd = lesionSize / 7.5; nasal = 1; ddsrc = 'assumed (disc not segmented)';
 end
 kinds = {'MA', 'HE', 'EX', 'SE'};
 for k = 1:4, r.counts.(kinds{k}) = sum(strcmp({lesions.kind}, kinds{k})); end
@@ -40,11 +41,16 @@ ex = lesions(strcmp({lesions.kind}, 'EX'));
 if ~isempty(ex)
     d = min(hypot([ex.x] - fx, [ex.y] - fy)) / dd;
     r.dme_risk = 1 + (d <= 1);
+    r.nearest_exudate_dd = round(d, 2);
     trace{end + 1} = sprintf('Nearest hard exudate %.1f disc diameters from the fovea.', d);
 else
     r.dme_risk = 0;
+    r.nearest_exudate_dd = NaN;
 end
 r.lesion_flag = r.evidence_grade >= 2;
 r.dme_flag = r.dme_risk == 2;
 r.trace = trace;
+r.fovea = struct('x', fx, 'y', fy, 'source', fsrc);
+r.disc_diameter_px = dd;
+r.disc_diameter_source = ddsrc;
 end

@@ -27,7 +27,7 @@ P = zeros(m, 5);
 for i = 1:m
     sz = man.graders(i).size;
     img = grader_input(drishti_preprocess(rgb, sz, false));
-    X = dlarray(normalise_imagenet(img, man), 'SSCB');
+    X = on_device(dlarray(normalise_imagenet(img, man), 'SSCB'));
     Xf = X(:, end:-1:1, :, :);                    % horizontal flip (width is dim 2)
     l = (member_logits(nets{i}, X) + member_logits(nets{i}, Xf)) / 2;
     P(i, :) = corn_probs(l);
@@ -43,7 +43,7 @@ end
 
 function l = member_logits(net, X)
 [lg, ~] = predict(net, X);                        % outputs: logits, features
-l = double(reshape(extractdata(lg), 1, []));
+l = double(reshape(gather(extractdata(lg)), 1, []));
 end
 
 function p = corn_probs(l)

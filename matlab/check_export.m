@@ -33,4 +33,23 @@ if max(T.abs_diff) <= 0.02
 else
     fprintf('CHECK: max difference %.3f exceeds 0.02\n', max(T.abs_diff));
 end
+
+% learned gradability (quality.onnx), on the samples and on degraded copies
+% of them written by scripts/export_matlab.py; the score is steep on blurred
+% photographs, so 0.05 here is a tighter match than it looks
+if isfield(man, 'quality')
+    qr = man.quality.reference;
+    worst = 0;
+    for i = 1:numel(qr)
+        f = fullfile(here, '..', 'app', 'samples', qr(i).file);
+        if contains(qr(i).file, '/'), f = fullfile(onnxDir, qr(i).file); end
+        s = gradability(drishti_preprocess(imread(f), 512, false), onnxDir, man);
+        worst = max(worst, abs(s - qr(i).gradability));
+    end
+    if worst <= 0.05
+        fprintf('PASS: gradability matches Python within 0.05 on %d photographs (max %.3f)\n', numel(qr), worst);
+    else
+        fprintf('CHECK: gradability differs by %.3f\n', worst);
+    end
+end
 end

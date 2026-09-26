@@ -21,7 +21,11 @@ reproduces the Python numbers.
 | `grade_ensemble.m` | imports each `grader_<run>.onnx`, flip-averages its logits, forms CORN class probabilities, averages across members | Deep Learning (+ ONNX), Image Processing |
 | `check_export.m` | runs `grade_ensemble` on `app/samples/*.jpg` and compares with the Python reference values in `manifest.json`; prints PASS/CHECK | as above |
 | `quality_gate.m` | focus / exposure / evenness / framing checks with retake instructions | Image Processing |
-| `run_pipeline.m` | quality gate -> grader ensemble + Grad-CAM -> lesion maps -> connected components -> rule engine -> triage policy -> figure | Deep Learning (+ ONNX), Image Processing |
+| `drishti_screen.m` | quality gate -> grader ensemble + Grad-CAM -> lesion maps -> connected components -> landmarks -> rule engine, with report images; networks cached per session. The web app's MATLAB backend calls this | Deep Learning (+ ONNX), Image Processing |
+| `run_pipeline.m` | `drishti_screen` -> triage policy (switches from `configs/triage.json`) -> figure | as above |
+| `gradability.m` | learned gradability score from `quality.onnx` (added to an existing export with `scripts/export_matlab.py --only-quality`); `check_export` compares it with Python on the samples and on degraded copies | Deep Learning (+ ONNX), Image Processing |
+| `resize_area.m` | bit-exact port of OpenCV's `INTER_AREA` downscaling, ties rounded to even; `imresize` is close on sharp photos but moved the gradability score by up to 0.48 on blurred ones | none |
+| `on_device.m` | runs inference on the GPU when `canUseGPU()` (2-4 s a photograph instead of ~9 s); `DRISHTI_MATLAB_CPU=1` forces the CPU | Parallel Computing (optional) |
 | `rule_engine.m` | ICDR evidence, quadrant counts, DME risk (mirrors `drishti/rules/icdr.py`) | none |
 | `build_simulink_model.m` | builds `drishti_district.slx`, a SimEvents model of the district workflow, from `sim/params.json` | Simulink, SimEvents |
 | `district_report.m` | turns a `sim()` result into the capacity numbers module 5 asks for | none |
