@@ -1,0 +1,51 @@
+# systemd unit for the DrishtiTrust web app. Installed by deploy/install.sh.
+#
+# Logs:  journalctl -u drishtitrust -f
+
+[Unit]
+Description=DrishtiTrust (SIH26038 diabetic retinopathy screening, PyTorch on CPU)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=abhijith
+Group=abhijith
+
+WorkingDirectory=/home/abhijith/dr-screening
+Environment=PYTHONUNBUFFERED=1
+# This box has no GPU and no MATLAB; say so rather than let `auto` guess.
+Environment=DRISHTI_BACKEND=python
+# Cases, referrals and reviews live outside the checkout, so a `git pull` or a
+# fresh clone cannot take them with it. Local ext4, so sqlite is safe here.
+Environment=DRISHTI_DB=/srv/nas/drishtitrust/drishti.db
+# The laptop also serves six other apps. Leave them some cores: a screen takes
+# ~12 s on 4 threads and barely less on 8.
+Environment=OMP_NUM_THREADS=4
+
+# One worker. The ensemble is loaded once into memory (~2 GB); a second worker
+# would load it again, and two processes writing sqlite is where "database is
+# locked" comes from.
+# --proxy-headers: Cloudflare terminates TLS, and the slip's QR code is built
+# from request.base_url -- without this it would print an http:// link.
+ExecStart=/home/abhijith/dr-screening/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8026 \
+    --workers 1 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1
+
+Restart=always
+RestartSec=3
+# Lower priority than the other services: a burst of screens should slow
+# DrishtiTrust down, not the chat server.
+Nice=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/srv/nas/drishtitrust
+ProtectKernelTunables=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
